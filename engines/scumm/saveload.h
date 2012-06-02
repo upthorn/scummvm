@@ -47,7 +47,12 @@ namespace Scumm {
  * only saves/loads those which are valid for the version of the savegame
  * which is being loaded/saved currently.
  */
+#ifdef SAVING_ANYWHERE
+#define VER_ANYWHERE 714
+#define CURRENT_VER VER_ANYWHERE
+#else
 #define CURRENT_VER 92
+#endif
 
 /**
  * An auxillary macro, used to specify savegame versions. We use this instead
