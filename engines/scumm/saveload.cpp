@@ -1875,10 +1875,25 @@ void ScummEngine_v72he::saveOrLoad(Serializer *s) {
 		MKLINE(WizParameters, field_23EA, sleInt32, VER(VER_ANYWHERE)), 
 		MKEND()
 	};
+	s->saveLoadEntries(this, HE72Entries);
+	s->saveLoadEntries(&_wizParams, WizParameterEntries);
 }
 
 void ScummEngine_v80he::saveOrLoad(Serializer *s) {
 	ScummEngine_v72he::saveOrLoad(s);
+
+	const SaveLoadEntry HE80Entries[] = {
+		MKLINE(ScummEngine_v80he, _heSndResId, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, _curSndId, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, _sndPtrOffs, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, _sndTmrOffs, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, _sndDataSize, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, VAR_PLATFORM_VERSION, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, VAR_CURRENT_CHARSET, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, VAR_KEY_STATE, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v80he, VAR_COLOR_DEPTH, sleByte, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
 }
 
 #endif
@@ -1902,6 +1917,17 @@ void ScummEngine_v90he::saveOrLoad(Serializer *s) {
 		MKEND()
 	};
 
+#ifdef SAVING_ANYWHERE
+	const SaveLoadEntry VideoParameterEntries[] = {
+		MKARRAY(VideoParameters, filename, sleByte, 260, VER(VER_ANYWHERE)),
+		MKLINE(VideoParameters, status, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(VideoParameters, flags, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(VideoParameters, unk2, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(VideoParameters, wizResNum, sleInt32, VER(VER_ANYWHERE)),
+		MKEND()
+	};
+#endif
+
 	const SaveLoadEntry HE90Entries[] = {
 		MKLINE(ScummEngine_v90he, _curMaxSpriteId, sleInt32, VER(51)),
 		MKLINE(ScummEngine_v90he, _curSpriteId, sleInt32, VER(51)),
@@ -1916,7 +1942,11 @@ void ScummEngine_v90he::saveOrLoad(Serializer *s) {
 	_sprite->saveOrLoadSpriteData(s);
 
 	s->saveLoadArrayOf(&_floodFillParams, 1, sizeof(_floodFillParams), floodFillEntries);
+#ifdef SAVING_ANYWHERE
+	s->saveLoadEntries(&_videoParams, VideoParameterEntries);
 
+	// TODO: _logicHE if necessary, _moviePlay if necessary
+#endif
 	s->saveLoadEntries(this, HE90Entries);
 }
 
@@ -1932,6 +1962,9 @@ void ScummEngine_v100he::saveOrLoad(Serializer *s) {
 	const SaveLoadEntry HE100Entries[] = {
 		MKLINE(ScummEngine_v100he, _heResId, sleInt32, VER(51)),
 		MKLINE(ScummEngine_v100he, _heResType, sleInt32, VER(51)),
+#ifdef SAVING_ANYWHERE
+		MKARRAY(ScummEngine_v100he, _debugInputBuffer, sleByte, ARRAYSIZE(_debugInputBuffer), VER(VER_ANYWHERE)), 
+#endif
 		MKEND()
 	};
 
