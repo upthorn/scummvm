@@ -115,6 +115,9 @@ enum {
 	sleUint16 = 3,
 	sleInt32 = 4,
 	sleUint32 = 5
+#ifdef SAVING_ANYWHERE
+	, sleString = 6
+#endif
 };
 
 struct SaveLoadEntry {

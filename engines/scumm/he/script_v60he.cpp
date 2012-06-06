@@ -719,10 +719,16 @@ void ScummEngine_v60he::o60_openFile() {
 			_hInFileTable[slot] = _saveFileMan->openForLoading(filename);
 			if (_hInFileTable[slot] == 0) {
 				_hInFileTable[slot] = SearchMan.createReadStreamForMember(filename);
+#ifdef SAVING_ANYWHERE
+				_hInFilenameTable[slot] = filename;
+#endif
 			}
 			break;
 		case 2:
 			_hOutFileTable[slot] = _saveFileMan->openForSaving(filename);
+#ifdef SAVING_ANYWHERE
+			_hOutFilenameTable[slot] = filename;
+#endif
 			break;
 		default:
 			error("o60_openFile(): wrong open file mode %d", mode);
@@ -742,10 +748,16 @@ void ScummEngine_v60he::o60_closeFile() {
 			_hOutFileTable[slot]->finalize();
 			delete _hOutFileTable[slot];
 			_hOutFileTable[slot] = 0;
+#ifdef SAVING_ANYWHERE
+			_hOutFilenameTable[slot].clear();
+#endif
 		}
 
 		delete _hInFileTable[slot];
 		_hInFileTable[slot] = 0;
+#ifdef SAVING_ANYWHERE
+		_hInFilenameTable[slot].clear();
+#endif
 	}
 }
 

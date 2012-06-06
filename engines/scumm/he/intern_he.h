@@ -52,6 +52,10 @@ protected:
 public:
 	Common::SeekableReadStream *_hInFileTable[17];
 	Common::WriteStream *_hOutFileTable[17];
+#ifdef SAVING_ANYWHERE
+	Common::String _hInFilenameTable[17];
+	Common::String _hOutFilenameTable[17];
+#endif
 
 	Common::Rect _actorClipOverride;	// HE specific
 
@@ -113,6 +117,9 @@ protected:
 	byte *_heV7DiskOffsets;
 	byte *_heV7RoomOffsets;
 	uint32 *_heV7RoomIntOffsets;
+#ifdef SAVING_ANYWHERE
+	uint16 _numHeV7DiskOffsets, _numHeV7RoomOffsets;
+#endif
 
 	int32 _heSndSoundId, _heSndOffset, _heSndChannel, _heSndFlags, _heSndSoundFreq;
 
@@ -261,6 +268,10 @@ public:
 protected:
 	virtual void setupOpcodes();
 
+#ifdef SAVING_ANYWHERE
+	virtual void saveOrLoad(Serializer *s);
+#endif
+
 	virtual void setupScummVars();
 	virtual void resetScummVars();
 	virtual void readArrayFromIndexFile();
@@ -368,6 +379,10 @@ public:
 
 protected:
 	virtual void setupOpcodes();
+
+#ifdef SAVING_ANYWHERE
+	virtual void saveOrLoad(Serializer *s);
+#endif
 
 	virtual void setupScummVars();
 	virtual void resetScummVars();

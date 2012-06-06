@@ -90,8 +90,10 @@ bool ScummEngine::canLoadGameStateCurrently() {
 	//
 	// Except the earliest HE Games (3DO and initial DOS version of
 	// puttputt), which didn't offer scripted load/save screens.
+#ifndef SAVING_ANYWHERE
 	if (_game.heversion >= 62)
 		return false;
+#endif
 
 	// COMI always disables saving/loading (to tell the truth:
 	// the main menu) via its scripts, thus we need to make an
@@ -119,8 +121,10 @@ bool ScummEngine::canSaveGameStateCurrently() {
 	//
 	// Except the earliest HE Games (3DO and initial DOS version of
 	// puttputt), which didn't offer scripted load/save screens.
+#ifndef SAVING_ANYWHERE
 	if (_game.heversion >= 62)
 		return false;
+#endif
 
 	// COMI always disables saving/loading (to tell the truth:
 	// the main menu) via its scripts, thus we need to make an
@@ -1603,14 +1607,94 @@ void ScummEngine_v7::saveOrLoad(Serializer *s) {
 
 void ScummEngine_v60he::saveOrLoad(Serializer *s) {
 	ScummEngine::saveOrLoad(s);
+#ifdef SAVING_ANYWHERE
+	int32 hInFilePositions[17];
+	if (s->isSaving()) {
+		for (int i = 0; i < 17; i++)  {
+			if (_hInFileTable[i]) 
+				hInFilePositions[i] = _hInFileTable[i]->pos();
+			else 
+				hInFilePositions[i] = 0;
+		}
+	}
 
+	s->saveLoadArrayOf((void *)hInFilePositions, 17, sizeof(uint32), sleInt32);
+	const SaveLoadEntry HE60Entries[] = {
+		MKARRAY(ScummEngine_v60he, _hInFilenameTable, sleString, 17, VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v60he, _hOutFilenameTable, sleString, 17, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v60he, _actorClipOverride.top, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ScummEngine_v60he, _actorClipOverride.bottom, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ScummEngine_v60he, _actorClipOverride.left, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ScummEngine_v60he, _actorClipOverride.right, sleInt16, VER(VER_ANYWHERE)),
+		MKARRAY(ScummEngine_v60he, _heTimers, sleInt32, 16, VER(VER_ANYWHERE)),
+		MKARRAY(ScummEngine_v60he, _arraySlot, sleByte, _numArray, VER(0)),
+		MKEND()
+	};
+
+	s->saveLoadEntries(this, HE60Entries);
+	if (s->isLoading()) {
+		for (int i = 0; i < 17; i++) {
+			if (!_hInFilenameTable[i].empty()) {
+				if (_game.heversion < 72) {
+					_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
+					if (_hInFileTable[i] == 0) {
+						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
+					}
+					_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
+				} else {
+					if (!_saveFileMan->listSavefiles(_hInFilenameTable[i]).empty()) {
+						_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
+					} else {
+						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
+					}
+					_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
+				}
+			}
+			if (!_hOutFilenameTable[i].empty()) {
+				Common::InSaveFile *initialState = 0;
+				if (!_saveFileMan->listSavefiles(_hOutFilenameTable[i]).empty())
+					initialState = _saveFileMan->openForLoading(_hOutFilenameTable[i]);
+				else
+					initialState = SearchMan.createReadStreamForMember(_hOutFilenameTable[i]);
+
+				// Read in the data from the initial file
+				uint32 initialSize = 0;
+				byte *initialData = 0;
+				if (initialState) {
+					initialSize = initialState->size();
+					initialData = new byte[initialSize];
+					initialState->read(initialData, initialSize);
+					delete initialState;
+				}
+
+				// Attempt to open a save file
+				_hOutFileTable[i] = _saveFileMan->openForSaving(_hOutFilenameTable[i]);
+
+				// Begin us off with the data from the previous file
+				if (_hOutFileTable[i] && initialData) {
+					_hOutFileTable[i]->write(initialData, initialSize);
+					delete[] initialData;
+				}
+			}
+		}
+	}
+#else
 	s->saveLoadArrayOf(_arraySlot, _numArray, sizeof(_arraySlot[0]), sleByte);
+#endif
 }
 
 void ScummEngine_v70he::saveOrLoad(Serializer *s) {
 	ScummEngine_v60he::saveOrLoad(s);
 
+	//TODO: _resExtractor, if necessary
 	const SaveLoadEntry HE70Entries[] = {
+#ifdef SAVING_ANYWHERE
+		MKLINE(ScummEngine_v70he, _numHeV7DiskOffsets, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v70he, _numHeV7RoomOffsets, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v70he, _numRooms, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(ScummEngine_v70he, _numStoredFlObjects, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(ScummEngine_v70he, VAR_NUM_SOUND_CHANNELS, sleByte, VER(VER_ANYWHERE)),
+#endif
 		MKLINE(ScummEngine_v70he, _heSndSoundId, sleInt32, VER(51)),
 		MKLINE(ScummEngine_v70he, _heSndOffset, sleInt32, VER(51)),
 		MKLINE(ScummEngine_v70he, _heSndChannel, sleInt32, VER(51)),
@@ -1619,11 +1703,89 @@ void ScummEngine_v70he::saveOrLoad(Serializer *s) {
 	};
 
 	s->saveLoadEntries(this, HE70Entries);
+#ifdef SAVING_ANYWHERE
+	if (s->isLoading()) {
+		free(_heV7DiskOffsets);
+		free(_heV7RoomOffsets);
+		free(_heV7RoomIntOffsets);
+		memset(_storedFlObjects, 0, 100 * sizeof(ObjectData));
+		_heV7DiskOffsets = (byte *)malloc(_numHeV7DiskOffsets);
+		_heV7RoomOffsets = (byte *)malloc(_numHeV7RoomOffsets * 4 + 2);
+		_heV7RoomIntOffsets = (uint32 *)calloc(_numRooms, sizeof(uint32));
+	}
+	const SaveLoadEntry HEV7Arrays[] = {
+		MKARRAY(ScummEngine_v70he, _heV7DiskOffsets, sleByte, _numHeV7DiskOffsets, VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v70he, _heV7RoomOffsets, sleByte, _numHeV7RoomOffsets * 4 + 2, VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v70he, _heV7RoomIntOffsets, sleInt32, _numRooms, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+	s->saveLoadEntries(this, HEV7Arrays);
+	const SaveLoadEntry HEObjectDataEntries[] = {
+		MKLINE(ObjectData, OBIMoffset, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, OBCDoffset, sleInt32, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, walk_x, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, walk_y, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, x_pos, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, y_pos, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, obj_nr, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, width, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, height, sleInt16, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, actordir, sleByte, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, parent, sleByte, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, parentstate, sleByte, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, state, sleByte, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, fl_object_index, sleByte, VER(VER_ANYWHERE)),
+		MKLINE(ObjectData, flags, sleByte, VER(VER_ANYWHERE)),
+		MKEND()
+	};
+	s->saveLoadArrayOf(_storedFlObjects, _numStoredFlObjects, sizeof(ObjectData), HEObjectDataEntries);
+#endif
 }
 
 #ifdef ENABLE_HE
 void ScummEngine_v71he::saveOrLoad(Serializer *s) {
 	ScummEngine_v70he::saveOrLoad(s);
+
+#ifdef SAVING_ANYWHERE
+	const SaveLoadEntry HE71Entries[] = {
+		MKLINE(ScummEngine_v71he, _skipProcessActors, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v71he, VAR_WIZ_TCOLOR, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v71he, _wiz->_imagesNum, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v71he, _auxBlocksNum, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v71he, _auxEntriesNum, sleInt16, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+	const SaveLoadEntry WizImageEntries[] = {
+		MKLINE(WizImage, resNum, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, x1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, y1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, zorder, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, state, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, flags, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, shadow, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, field_390, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizImage, palette, sleInt32, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+	const SaveLoadEntry AuxBlockEntries[] = {
+		MKLINE(AuxBlock, visible, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(AuxBlock, r.top, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(AuxBlock, r.bottom, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(AuxBlock, r.left, sleInt16, VER(VER_ANYWHERE)), 
+		MKLINE(AuxBlock, r.right, sleInt16, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+	const SaveLoadEntry AuxEntryEntries[] = {
+		MKLINE(AuxEntry, actorNum, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(AuxEntry, subIndex, sleInt32, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+	s->saveLoadEntries(this, HE71Entries);
+	s->saveLoadArrayOf(_wiz->_images, ARRAYSIZE(_wiz->_images), sizeof(WizImage), WizImageEntries);
+	s->saveLoadArrayOf(_auxBlocks, ARRAYSIZE(_auxBlocks), sizeof(AuxBlock), AuxBlockEntries);
+	s->saveLoadArrayOf(_auxEntries, ARRAYSIZE(_auxEntries), sizeof(AuxEntry), AuxEntryEntries);
+
+#endif
 
 	const SaveLoadEntry polygonEntries[] = {
 		MKLINE(WizPolygon, vert[0].x, sleInt16, VER(40)),
@@ -1649,8 +1811,84 @@ void ScummEngine_v71he::saveOrLoad(Serializer *s) {
 	s->saveLoadArrayOf(_wiz->_polygons, ARRAYSIZE(_wiz->_polygons), sizeof(_wiz->_polygons[0]), polygonEntries);
 }
 
-void ScummEngine_v90he::saveOrLoad(Serializer *s) {
+#ifdef SAVING_ANYWHERE
+void ScummEngine_v72he::saveOrLoad(Serializer *s) {
 	ScummEngine_v71he::saveOrLoad(s);
+	const SaveLoadEntry HE72Entries[] = {
+		MKLINE(ScummEngine_v72he, _stringLength, sleInt32, VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v72he, _stringBuffer, sleByte, ARRAYSIZE(_stringBuffer), VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_ROOMS, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_SCRIPTS, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_SOUNDS, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_COSTUMES, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_IMAGES, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_NUM_CHARSETS, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_SOUND_ENABLED, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_POLYGONS_ONLY, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_MOUSE_STATE, sleByte, VER(VER_ANYWHERE)), 
+		MKLINE(ScummEngine_v72he, VAR_PLATFORM, sleByte, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+
+	const SaveLoadEntry WizParameterEntries[] = {
+		MKLINE(WizParameters, field_0, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, processFlags, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, processMode, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_11C, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_120, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_124, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_128, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_12C, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_130, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_134, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_138, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, compType, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, fileWriteMode, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, angle, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, scale, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, polygonId1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, polygonId2, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, resDefImgW, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, resDefImgH, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, sourceImage, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, params1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, params2, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, remapNum, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, dstResNum, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_2399, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_239D, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23A1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23A5, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23A9, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23AD, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23B1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23B5, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23B9, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23BD, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23C1, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23C5, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23C9, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23CD, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23DE, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, spriteId, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, spriteGroup, sleInt32, VER(VER_ANYWHERE)), 
+		MKLINE(WizParameters, field_23EA, sleInt32, VER(VER_ANYWHERE)), 
+		MKEND()
+	};
+}
+
+void ScummEngine_v80he::saveOrLoad(Serializer *s) {
+	ScummEngine_v72he::saveOrLoad(s);
+}
+
+#endif
+
+void ScummEngine_v90he::saveOrLoad(Serializer *s) {
+#ifdef SAVING_ANYWHERE
+	ScummEngine_v80he::saveOrLoad(s);
+#else
+	ScummEngine_v71he::saveOrLoad(s);
+#endif
 
 	const SaveLoadEntry floodFillEntries[] = {
 		MKLINE(FloodFillParameters, box.left, sleInt32, VER(51)),
@@ -1813,6 +2051,15 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 	byte *at = (byte *)b;
 	uint32 data;
 
+#ifdef SAVING_ANYWHERE
+	if (filetype == sleString) {
+		Common::String *strArr = (Common::String *)b;
+		for (int i = 0; i < len; i++) {
+			_saveStream->writeString(strArr[i]);
+		}
+	}
+#endif
+
 	// speed up byte arrays
 	if (datasize == 1 && filetype == sleByte) {
 		if (len > 0) {
@@ -1858,6 +2105,20 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 	byte *at = (byte *)b;
 	uint32 data;
+
+#ifdef SAVING_ANYWHERE
+	Common::String *strArr = (Common::String *)b;
+	for (int i = 0; i < len; i++) {
+		if (filetype == sleString) {
+			Common::String &str = strArr[i];
+			char c;
+			str.clear();
+			while ((c = _loadStream->readByte())) {
+				str += c;
+			}
+		}
+	}
+#endif
 
 	// speed up byte arrays
 	if (datasize == 1 && filetype == sleByte) {
