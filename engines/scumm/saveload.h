@@ -48,7 +48,7 @@ namespace Scumm {
  * which is being loaded/saved currently.
  */
 #ifdef SAVING_ANYWHERE
-#define VER_ANYWHERE 714
+#define VER_ANYWHERE 93 // woops, sleVersions are limited to 8 bits
 #define CURRENT_VER VER_ANYWHERE
 #else
 #define CURRENT_VER 92
@@ -130,9 +130,16 @@ struct SaveLoadEntry {
 
 class Serializer {
 public:
+#ifdef SAVING_ANYWHERE
+	uint32 _bytesSavedLoaded;
+#endif
+
 	Serializer(Common::SeekableReadStream *in, Common::WriteStream *out, uint32 savegameVersion)
 		: _loadStream(in), _saveStream(out),
 		  _savegameVersion(savegameVersion)
+#ifdef SAVING_ANYWHERE
+		  , _bytesSavedLoaded(0)
+#endif
 	{ }
 
 	void saveLoadArrayOf(void *b, int len, int datasize, byte filetype);

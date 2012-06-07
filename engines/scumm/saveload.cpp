@@ -1247,6 +1247,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 		// and index of each resource. Thus if we increase e.g. the maximum
 		// number of script resources, savegames won't break.
 		if (s->isSaving()) {
+#ifdef SAVING_ANYWHERE
+			debug("Resources beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 			for (type = rtFirst; type <= rtLast; type = ResType(type + 1)) {
 				if (_res->_types[type]._mode != kStaticResTypeMode && type != rtTemp && type != rtBuffer) {
 					s->saveUint16(type);	// Save the res type...
@@ -1262,6 +1265,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 			}
 			s->saveUint16(0xFFFF);	// End marker
 		} else {
+#ifdef SAVING_ANYWHERE
+			debug("Resources beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 			while ((type = (ResType)s->loadUint16()) != 0xFFFF) {
 				while ((idx = s->loadUint16()) != 0xFFFF) {
 					assert(idx < _res->_types[type].size());
@@ -1618,20 +1624,21 @@ void ScummEngine_v60he::saveOrLoad(Serializer *s) {
 		}
 	}
 
-	s->saveLoadArrayOf((void *)hInFilePositions, 17, sizeof(uint32), sleInt32);
+	s->saveLoadArrayOf((void *)hInFilePositions, ARRAYSIZE(hInFilePositions), sizeof(uint32), sleInt32);
 	const SaveLoadEntry HE60Entries[] = {
-		MKARRAY(ScummEngine_v60he, _hInFilenameTable, sleString, 17, VER(VER_ANYWHERE)), 
-		MKARRAY(ScummEngine_v60he, _hOutFilenameTable, sleString, 17, VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v60he, _hInFilenameTable, sleString, ARRAYSIZE(_hInFilenameTable), VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v60he, _hOutFilenameTable, sleString, ARRAYSIZE(_hOutFilenameTable), VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v60he, _actorClipOverride.top, sleInt16, VER(VER_ANYWHERE)),
 		MKLINE(ScummEngine_v60he, _actorClipOverride.bottom, sleInt16, VER(VER_ANYWHERE)),
 		MKLINE(ScummEngine_v60he, _actorClipOverride.left, sleInt16, VER(VER_ANYWHERE)),
 		MKLINE(ScummEngine_v60he, _actorClipOverride.right, sleInt16, VER(VER_ANYWHERE)),
-		MKARRAY(ScummEngine_v60he, _heTimers, sleInt32, 16, VER(VER_ANYWHERE)),
-		MKARRAY(ScummEngine_v60he, _arraySlot, sleByte, _numArray, VER(0)),
+		MKLINE(ScummEngine_v60he, _numArray, sleInt32, VER(VER_ANYWHERE)), 
 		MKEND()
 	};
 
 	s->saveLoadEntries(this, HE60Entries);
+	s->saveLoadArrayOf(_arraySlot, _numArray, 1, sleByte);
+	s->saveLoadArrayOf(_heTimers, ARRAYSIZE(_heTimers), 4, sleInt32);
 	if (s->isLoading()) {
 		for (int i = 0; i < 17; i++) {
 			if (!_hInFilenameTable[i].empty()) {
@@ -1640,14 +1647,16 @@ void ScummEngine_v60he::saveOrLoad(Serializer *s) {
 					if (_hInFileTable[i] == 0) {
 						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
 					}
-					_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
+					if (_hInFileTable[i] != 0)
+						_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
 				} else {
 					if (!_saveFileMan->listSavefiles(_hInFilenameTable[i]).empty()) {
 						_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
 					} else {
 						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
 					}
-					_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
+					if (_hInFileTable[i] != 0)
+						_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
 				}
 			}
 			if (!_hOutFilenameTable[i].empty()) {
@@ -1750,7 +1759,6 @@ void ScummEngine_v71he::saveOrLoad(Serializer *s) {
 	const SaveLoadEntry HE71Entries[] = {
 		MKLINE(ScummEngine_v71he, _skipProcessActors, sleByte, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v71he, VAR_WIZ_TCOLOR, sleByte, VER(VER_ANYWHERE)), 
-		MKLINE(ScummEngine_v71he, _wiz->_imagesNum, sleInt16, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v71he, _auxBlocksNum, sleInt16, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v71he, _auxEntriesNum, sleInt16, VER(VER_ANYWHERE)), 
 		MKEND()
@@ -1780,6 +1788,12 @@ void ScummEngine_v71he::saveOrLoad(Serializer *s) {
 		MKLINE(AuxEntry, subIndex, sleInt32, VER(VER_ANYWHERE)), 
 		MKEND()
 	};
+	if (s->isSaving()) {
+		s->saveUint16(_wiz->_imagesNum);
+	} else {
+		if (s->getVersion() >= VER(VER_ANYWHERE))
+			_wiz->_imagesNum = s->loadUint16();
+	}
 	s->saveLoadEntries(this, HE71Entries);
 	s->saveLoadArrayOf(_wiz->_images, ARRAYSIZE(_wiz->_images), sizeof(WizImage), WizImageEntries);
 	s->saveLoadArrayOf(_auxBlocks, ARRAYSIZE(_auxBlocks), sizeof(AuxBlock), AuxBlockEntries);
@@ -1816,7 +1830,7 @@ void ScummEngine_v72he::saveOrLoad(Serializer *s) {
 	ScummEngine_v71he::saveOrLoad(s);
 	const SaveLoadEntry HE72Entries[] = {
 		MKLINE(ScummEngine_v72he, _stringLength, sleInt32, VER(VER_ANYWHERE)), 
-		MKARRAY(ScummEngine_v72he, _stringBuffer, sleByte, ARRAYSIZE(_stringBuffer), VER(VER_ANYWHERE)), 
+//		MKLINE(ScummEngine_v72he, _stringBuffer, sleString, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v72he, VAR_NUM_ROOMS, sleByte, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v72he, VAR_NUM_SCRIPTS, sleByte, VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v72he, VAR_NUM_SOUNDS, sleByte, VER(VER_ANYWHERE)), 
@@ -1876,6 +1890,8 @@ void ScummEngine_v72he::saveOrLoad(Serializer *s) {
 		MKEND()
 	};
 	s->saveLoadEntries(this, HE72Entries);
+	if (!(s->getVersion() < VER(VER_ANYWHERE)))
+		s->saveLoadArrayOf(_stringBuffer, ARRAYSIZE(_stringBuffer), 1, sleByte);
 	s->saveLoadEntries(&_wizParams, WizParameterEntries);
 }
 
@@ -1894,6 +1910,7 @@ void ScummEngine_v80he::saveOrLoad(Serializer *s) {
 		MKLINE(ScummEngine_v80he, VAR_COLOR_DEPTH, sleByte, VER(VER_ANYWHERE)), 
 		MKEND()
 	};
+	s->saveLoadEntries(this, HE80Entries);
 }
 
 #endif
@@ -1919,7 +1936,7 @@ void ScummEngine_v90he::saveOrLoad(Serializer *s) {
 
 #ifdef SAVING_ANYWHERE
 	const SaveLoadEntry VideoParameterEntries[] = {
-		MKARRAY(VideoParameters, filename, sleByte, 260, VER(VER_ANYWHERE)),
+		MKLINE(VideoParameters, filename, sleString, VER(VER_ANYWHERE)),
 		MKLINE(VideoParameters, status, sleInt32, VER(VER_ANYWHERE)),
 		MKLINE(VideoParameters, flags, sleInt32, VER(VER_ANYWHERE)),
 		MKLINE(VideoParameters, unk2, sleInt32, VER(VER_ANYWHERE)),
@@ -1962,9 +1979,6 @@ void ScummEngine_v100he::saveOrLoad(Serializer *s) {
 	const SaveLoadEntry HE100Entries[] = {
 		MKLINE(ScummEngine_v100he, _heResId, sleInt32, VER(51)),
 		MKLINE(ScummEngine_v100he, _heResType, sleInt32, VER(51)),
-#ifdef SAVING_ANYWHERE
-		MKARRAY(ScummEngine_v100he, _debugInputBuffer, sleByte, ARRAYSIZE(_debugInputBuffer), VER(VER_ANYWHERE)), 
-#endif
 		MKEND()
 	};
 
@@ -2050,33 +2064,57 @@ void ScummEngine::loadResource(Serializer *ser, ResType type, ResId idx) {
 
 void Serializer::saveBytes(void *b, int len) {
 	_saveStream->write(b, len);
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += len;
+#endif
 }
 
 void Serializer::loadBytes(void *b, int len) {
 	_loadStream->read(b, len);
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += len;
+#endif
 }
 
 void Serializer::saveUint32(uint32 d) {
 	_saveStream->writeUint32LE(d);
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += 4;
+#endif
 }
 
 void Serializer::saveUint16(uint16 d) {
 	_saveStream->writeUint16LE(d);
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += 2;
+#endif
 }
 
 void Serializer::saveByte(byte b) {
 	_saveStream->writeByte(b);
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded++;
+#endif
 }
 
 uint32 Serializer::loadUint32() {
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += 4;
+#endif
 	return _loadStream->readUint32LE();
 }
 
 uint16 Serializer::loadUint16() {
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded += 2;
+#endif
 	return _loadStream->readUint16LE();
 }
 
 byte Serializer::loadByte() {
+#ifdef SAVING_ANYWHERE
+	_bytesSavedLoaded++;
+#endif
 	return _loadStream->readByte();
 }
 
@@ -2089,7 +2127,9 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 		Common::String *strArr = (Common::String *)b;
 		for (int i = 0; i < len; i++) {
 			_saveStream->writeString(strArr[i]);
+			_bytesSavedLoaded += strArr[i].size();
 		}
+		return;
 	}
 #endif
 
@@ -2097,6 +2137,9 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 	if (datasize == 1 && filetype == sleByte) {
 		if (len > 0) {
 			saveBytes(b, len);
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += len;
+#endif
 		}
 		return;
 	}
@@ -2108,12 +2151,21 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 		} else if (datasize == 1) {
 			data = *(byte *)at;
 			at += 1;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded ++;
+#endif
 		} else if (datasize == 2) {
 			data = *(uint16 *)at;
 			at += 2;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += 2;
+#endif
 		} else if (datasize == 4) {
 			data = *(uint32 *)at;
 			at += 4;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += 4;
+#endif
 		} else {
 			error("saveArrayOf: invalid size %d", datasize);
 		}
@@ -2141,15 +2193,19 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 
 #ifdef SAVING_ANYWHERE
 	Common::String *strArr = (Common::String *)b;
-	for (int i = 0; i < len; i++) {
-		if (filetype == sleString) {
+	if (filetype == sleString) {
+		for (int i = 0; i < len; i++) {
 			Common::String &str = strArr[i];
 			char c;
 			str.clear();
 			while ((c = _loadStream->readByte())) {
 				str += c;
 			}
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += str.size();
+#endif
 		}
+		return;
 	}
 #endif
 
@@ -2184,12 +2240,21 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 		} else if (datasize == 1) {
 			*(byte *)at = (byte)data;
 			at += 1;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded ++;
+#endif
 		} else if (datasize == 2) {
 			*(uint16 *)at = (uint16)data;
 			at += 2;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += 2;
+#endif
 		} else if (datasize == 4) {
 			*(uint32 *)at = data;
 			at += 4;
+#ifdef SAVING_ANYWHERE
+			_bytesSavedLoaded += 4;
+#endif
 		} else {
 			error("loadArrayOf: invalid size %d", datasize);
 		}
