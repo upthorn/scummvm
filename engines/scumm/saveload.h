@@ -47,9 +47,7 @@ namespace Scumm {
  * only saves/loads those which are valid for the version of the savegame
  * which is being loaded/saved currently.
  */
-#ifdef SAVING_ANYWHERE
 #define VER_ANYWHERE 93 // woops, sleVersions are limited to 8 bits
-#endif
 #define CURRENT_VER 93
 
 /**
@@ -112,10 +110,8 @@ enum {
 	sleInt16 = 2,
 	sleUint16 = 3,
 	sleInt32 = 4,
-	sleUint32 = 5
-#ifdef SAVING_ANYWHERE
-	, sleString = 6
-#endif
+	sleUint32 = 5,
+	sleString = 6
 };
 
 struct SaveLoadEntry {
@@ -128,17 +124,13 @@ struct SaveLoadEntry {
 
 class Serializer {
 public:
-#ifdef SAVING_ANYWHERE
-	uint32 _bytesSavedLoaded;
-#endif
 
 	Serializer(Common::SeekableReadStream *in, Common::WriteStream *out, uint32 savegameVersion)
 		: _loadStream(in), _saveStream(out),
-		  _savegameVersion(savegameVersion)
-#ifdef SAVING_ANYWHERE
-		  , _bytesSavedLoaded(0)
-#endif
+		  _savegameVersion(savegameVersion), 
+		  _bytesSavedLoaded(0)
 	{ }
+
 
 	void saveLoadArrayOf(void *b, int len, int datasize, byte filetype);
 	void saveLoadArrayOf(void *b, int num, int datasize, const SaveLoadEntry *sle);
@@ -147,6 +139,7 @@ public:
 	bool isSaving() { return (_saveStream != 0); }
 	bool isLoading() { return (_loadStream != 0); }
 	uint32 getVersion() { return _savegameVersion; }
+	uint32 bytesSavedLoaded() { return _bytesSavedLoaded; }
 
 	void saveUint32(uint32 d);
 	void saveUint16(uint16 d);
@@ -158,11 +151,12 @@ public:
 
 	void saveBytes(void *b, int len);
 	void loadBytes(void *b, int len);
-
+	
 protected:
 	Common::SeekableReadStream *_loadStream;
 	Common::WriteStream *_saveStream;
 	uint32 _savegameVersion;
+	uint32 _bytesSavedLoaded;
 
 	void saveArrayOf(void *b, int len, int datasize, byte filetype);
 	void loadArrayOf(void *b, int len, int datasize, byte filetype);

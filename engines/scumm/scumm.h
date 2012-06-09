@@ -325,8 +325,11 @@ enum UserStates {
  */
 enum ResType {
 	rtInvalid = 0,
-	rtFirst = 1,
+
+	// MSVS Debugger provides the first enum name listed for a value so placing
+	// rtRoom before rtFirst makes the debugger output slightly more helpful
 	rtRoom = 1,
+	rtFirst = 1,
 	rtScript = 2,
 	rtCostume = 3,
 	rtSound = 4,
