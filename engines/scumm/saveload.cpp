@@ -1126,6 +1126,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load main state (many members of class ScummEngine get saved here)
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Main state at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	s->saveLoadEntries(this, mainEntries);
 
 	// MD5 Operations: Backup on load, compare, and reset.
@@ -1174,6 +1177,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load actors
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Actors beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	for (i = 0; i < _numActors; i++)
 		_actors[i]->saveLoadWithSerializer(s);
 
@@ -1181,12 +1187,18 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load sound data
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Sound beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	_sound->saveLoadWithSerializer(s);
 
 
 	//
 	// Save/load script data
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Script data beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	if (s->getVersion() < VER(9))
 		s->saveLoadArrayOf(vm.slot, 25, sizeof(vm.slot[0]), scriptSlotEntries);
 	else if (s->getVersion() < VER(20))
@@ -1208,6 +1220,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load local objects
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Local objects beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	s->saveLoadArrayOf(_objs, _numLocalObjects, sizeof(_objs[0]), objectEntries);
 	if (s->isLoading()) {
 		if (s->getVersion() < VER(13)) {
@@ -1228,6 +1243,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load misc stuff
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Miscellanea beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	s->saveLoadArrayOf(_verbs, _numVerbs, sizeof(_verbs[0]), verbEntries);
 	s->saveLoadArrayOf(vm.nest, 16, sizeof(vm.nest[0]), nestedScriptEntries);
 	s->saveLoadArrayOf(_sentence, 6, sizeof(_sentence[0]), sentenceTabEntries);
@@ -1240,6 +1258,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 	//
 	// Save/load resources
 	//
+#ifdef SAVING_ANYWHERE
+	debug("Resources beginning at %08X...\n", s->_bytesSavedLoaded);
+#endif
 	ResType type;
 	ResId idx;
 	if (s->getVersion() >= VER(26)) {
@@ -1247,9 +1268,6 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 		// and index of each resource. Thus if we increase e.g. the maximum
 		// number of script resources, savegames won't break.
 		if (s->isSaving()) {
-#ifdef SAVING_ANYWHERE
-			debug("Resources beginning at %08X...\n", s->_bytesSavedLoaded);
-#endif
 			for (type = rtFirst; type <= rtLast; type = ResType(type + 1)) {
 				if (_res->_types[type]._mode != kStaticResTypeMode && type != rtTemp && type != rtBuffer) {
 					s->saveUint16(type);	// Save the res type...
@@ -1265,9 +1283,6 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 			}
 			s->saveUint16(0xFFFF);	// End marker
 		} else {
-#ifdef SAVING_ANYWHERE
-			debug("Resources beginning at %08X...\n", s->_bytesSavedLoaded);
-#endif
 			while ((type = (ResType)s->loadUint16()) != 0xFFFF) {
 				while ((idx = s->loadUint16()) != 0xFFFF) {
 					assert(idx < _res->_types[type].size());
@@ -1626,8 +1641,8 @@ void ScummEngine_v60he::saveOrLoad(Serializer *s) {
 
 	s->saveLoadArrayOf((void *)hInFilePositions, ARRAYSIZE(hInFilePositions), sizeof(uint32), sleInt32);
 	const SaveLoadEntry HE60Entries[] = {
-		MKARRAY(ScummEngine_v60he, _hInFilenameTable, sleString, ARRAYSIZE(_hInFilenameTable), VER(VER_ANYWHERE)), 
-		MKARRAY(ScummEngine_v60he, _hOutFilenameTable, sleString, ARRAYSIZE(_hOutFilenameTable), VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v60he, _hInFilenameTable[0], sleString, ARRAYSIZE(_hInFilenameTable), VER(VER_ANYWHERE)), 
+		MKARRAY(ScummEngine_v60he, _hOutFilenameTable[0], sleString, ARRAYSIZE(_hOutFilenameTable), VER(VER_ANYWHERE)), 
 		MKLINE(ScummEngine_v60he, _actorClipOverride.top, sleInt16, VER(VER_ANYWHERE)),
 		MKLINE(ScummEngine_v60he, _actorClipOverride.bottom, sleInt16, VER(VER_ANYWHERE)),
 		MKLINE(ScummEngine_v60he, _actorClipOverride.left, sleInt16, VER(VER_ANYWHERE)),
@@ -1637,52 +1652,52 @@ void ScummEngine_v60he::saveOrLoad(Serializer *s) {
 	};
 
 	s->saveLoadEntries(this, HE60Entries);
-	s->saveLoadArrayOf(_arraySlot, _numArray, 1, sleByte);
-	s->saveLoadArrayOf(_heTimers, ARRAYSIZE(_heTimers), 4, sleInt32);
-	if (s->isLoading()) {
-		for (int i = 0; i < 17; i++) {
-			if (!_hInFilenameTable[i].empty()) {
-				if (_game.heversion < 72) {
-					_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
-					if (_hInFileTable[i] == 0) {
-						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
-					}
-					if (_hInFileTable[i] != 0)
-						_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
-				} else {
-					if (!_saveFileMan->listSavefiles(_hInFilenameTable[i]).empty()) {
+	if (s->getVersion() >= VER(VER_ANYWHERE)) { 
+		if (s->isLoading()) {
+			for (int i = 0; i < 17; i++) {
+				if (!_hInFilenameTable[i].empty()) {
+					if (_game.heversion < 72) {
 						_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
+						if (_hInFileTable[i] == 0) {
+							_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
+						}
+						if (_hInFileTable[i] != 0)
+							_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
 					} else {
-						_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
+						if (!_saveFileMan->listSavefiles(_hInFilenameTable[i]).empty()) {
+							_hInFileTable[i] = _saveFileMan->openForLoading(_hInFilenameTable[i]);
+						} else {
+							_hInFileTable[i] = SearchMan.createReadStreamForMember(_hInFilenameTable[i]);
+						}
+						if (_hInFileTable[i] != 0)
+							_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
 					}
-					if (_hInFileTable[i] != 0)
-						_hInFileTable[i]->seek(hInFilePositions[i], SEEK_SET);
 				}
-			}
-			if (!_hOutFilenameTable[i].empty()) {
-				Common::InSaveFile *initialState = 0;
-				if (!_saveFileMan->listSavefiles(_hOutFilenameTable[i]).empty())
-					initialState = _saveFileMan->openForLoading(_hOutFilenameTable[i]);
-				else
-					initialState = SearchMan.createReadStreamForMember(_hOutFilenameTable[i]);
+				if (!_hOutFilenameTable[i].empty()) {
+					Common::InSaveFile *initialState = 0;
+					if (!_saveFileMan->listSavefiles(_hOutFilenameTable[i]).empty())
+						initialState = _saveFileMan->openForLoading(_hOutFilenameTable[i]);
+					else
+						initialState = SearchMan.createReadStreamForMember(_hOutFilenameTable[i]);
 
-				// Read in the data from the initial file
-				uint32 initialSize = 0;
-				byte *initialData = 0;
-				if (initialState) {
-					initialSize = initialState->size();
-					initialData = new byte[initialSize];
-					initialState->read(initialData, initialSize);
-					delete initialState;
-				}
+					// Read in the data from the initial file
+					uint32 initialSize = 0;
+					byte *initialData = 0;
+					if (initialState) {
+						initialSize = initialState->size();
+						initialData = new byte[initialSize];
+						initialState->read(initialData, initialSize);
+						delete initialState;
+					}
 
-				// Attempt to open a save file
-				_hOutFileTable[i] = _saveFileMan->openForSaving(_hOutFilenameTable[i]);
+					// Attempt to open a save file
+					_hOutFileTable[i] = _saveFileMan->openForSaving(_hOutFilenameTable[i]);
 
-				// Begin us off with the data from the previous file
-				if (_hOutFileTable[i] && initialData) {
-					_hOutFileTable[i]->write(initialData, initialSize);
-					delete[] initialData;
+					// Begin us off with the data from the previous file
+					if (_hOutFileTable[i] && initialData) {
+						_hOutFileTable[i]->write(initialData, initialSize);
+						delete[] initialData;
+					}
 				}
 			}
 		}
@@ -1713,41 +1728,39 @@ void ScummEngine_v70he::saveOrLoad(Serializer *s) {
 
 	s->saveLoadEntries(this, HE70Entries);
 #ifdef SAVING_ANYWHERE
-	if (s->isLoading()) {
-		free(_heV7DiskOffsets);
-		free(_heV7RoomOffsets);
-		free(_heV7RoomIntOffsets);
-		memset(_storedFlObjects, 0, 100 * sizeof(ObjectData));
-		_heV7DiskOffsets = (byte *)malloc(_numHeV7DiskOffsets);
-		_heV7RoomOffsets = (byte *)malloc(_numHeV7RoomOffsets * 4 + 2);
-		_heV7RoomIntOffsets = (uint32 *)calloc(_numRooms, sizeof(uint32));
+	if (s->getVersion() >= VER(VER_ANYWHERE)) {
+		const SaveLoadEntry HEObjectDataEntries[] = {
+			MKLINE(ObjectData, OBIMoffset, sleInt32, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, OBCDoffset, sleInt32, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, walk_x, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, walk_y, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, x_pos, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, y_pos, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, obj_nr, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, width, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, height, sleInt16, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, actordir, sleByte, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, parent, sleByte, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, parentstate, sleByte, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, state, sleByte, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, fl_object_index, sleByte, VER(VER_ANYWHERE)),
+			MKLINE(ObjectData, flags, sleByte, VER(VER_ANYWHERE)),
+			MKEND()
+		};
+		if (s->isLoading()) {
+			free(_heV7DiskOffsets);
+			free(_heV7RoomOffsets);
+			free(_heV7RoomIntOffsets);
+			memset(_storedFlObjects, 0, _numStoredFlObjects * sizeof(ObjectData));
+			_heV7DiskOffsets = (byte *)malloc(_numHeV7DiskOffsets);
+			_heV7RoomOffsets = (byte *)malloc(_numHeV7RoomOffsets * 4 + 2);
+			_heV7RoomIntOffsets = (uint32 *)calloc(_numRooms, sizeof(uint32));
+		}
+		s->saveLoadArrayOf(_heV7DiskOffsets, _numHeV7DiskOffsets, sizeof(_heV7DiskOffsets[0]), sleByte);
+		s->saveLoadArrayOf(_heV7RoomOffsets, _numHeV7RoomOffsets, sizeof(_heV7RoomOffsets[0]), sleByte);
+		s->saveLoadArrayOf(_heV7RoomIntOffsets, _numRooms, sizeof(_heV7RoomIntOffsets[0]), sleInt32);
+		s->saveLoadArrayOf(_storedFlObjects, _numStoredFlObjects, sizeof(_storedFlObjects[0]), HEObjectDataEntries);
 	}
-	const SaveLoadEntry HEV7Arrays[] = {
-		MKARRAY(ScummEngine_v70he, _heV7DiskOffsets, sleByte, _numHeV7DiskOffsets, VER(VER_ANYWHERE)), 
-		MKARRAY(ScummEngine_v70he, _heV7RoomOffsets, sleByte, _numHeV7RoomOffsets * 4 + 2, VER(VER_ANYWHERE)), 
-		MKARRAY(ScummEngine_v70he, _heV7RoomIntOffsets, sleInt32, _numRooms, VER(VER_ANYWHERE)), 
-		MKEND()
-	};
-	s->saveLoadEntries(this, HEV7Arrays);
-	const SaveLoadEntry HEObjectDataEntries[] = {
-		MKLINE(ObjectData, OBIMoffset, sleInt32, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, OBCDoffset, sleInt32, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, walk_x, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, walk_y, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, x_pos, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, y_pos, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, obj_nr, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, width, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, height, sleInt16, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, actordir, sleByte, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, parent, sleByte, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, parentstate, sleByte, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, state, sleByte, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, fl_object_index, sleByte, VER(VER_ANYWHERE)),
-		MKLINE(ObjectData, flags, sleByte, VER(VER_ANYWHERE)),
-		MKEND()
-	};
-	s->saveLoadArrayOf(_storedFlObjects, _numStoredFlObjects, sizeof(ObjectData), HEObjectDataEntries);
 #endif
 }
 
@@ -1788,11 +1801,13 @@ void ScummEngine_v71he::saveOrLoad(Serializer *s) {
 		MKLINE(AuxEntry, subIndex, sleInt32, VER(VER_ANYWHERE)), 
 		MKEND()
 	};
-	if (s->isSaving()) {
-		s->saveUint16(_wiz->_imagesNum);
-	} else {
-		if (s->getVersion() >= VER(VER_ANYWHERE))
-			_wiz->_imagesNum = s->loadUint16();
+	if (s->getVersion() >= VER(VER_ANYWHERE)) {
+		if (s->isSaving()) {
+			s->saveUint16(_wiz->_imagesNum);
+		} else {
+			if (s->getVersion() >= VER(VER_ANYWHERE))
+				_wiz->_imagesNum = s->loadUint16();
+		}
 	}
 	s->saveLoadEntries(this, HE71Entries);
 	s->saveLoadArrayOf(_wiz->_images, ARRAYSIZE(_wiz->_images), sizeof(WizImage), WizImageEntries);
@@ -1890,8 +1905,8 @@ void ScummEngine_v72he::saveOrLoad(Serializer *s) {
 		MKEND()
 	};
 	s->saveLoadEntries(this, HE72Entries);
-	if (!(s->getVersion() < VER(VER_ANYWHERE)))
-		s->saveLoadArrayOf(_stringBuffer, ARRAYSIZE(_stringBuffer), 1, sleByte);
+	if (s->getVersion() >= VER(VER_ANYWHERE))
+		s->saveLoadArrayOf(_stringBuffer, ARRAYSIZE(_stringBuffer), sizeof(_stringBuffer[0]), sleByte);
 	s->saveLoadEntries(&_wizParams, WizParameterEntries);
 }
 
@@ -1962,7 +1977,7 @@ void ScummEngine_v90he::saveOrLoad(Serializer *s) {
 #ifdef SAVING_ANYWHERE
 	s->saveLoadEntries(&_videoParams, VideoParameterEntries);
 
-	// TODO: _logicHE if necessary, _moviePlay if necessary
+	// TODO: _moviePlay if necessary
 #endif
 	s->saveLoadEntries(this, HE90Entries);
 }
@@ -2137,9 +2152,6 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 	if (datasize == 1 && filetype == sleByte) {
 		if (len > 0) {
 			saveBytes(b, len);
-#ifdef SAVING_ANYWHERE
-			_bytesSavedLoaded += len;
-#endif
 		}
 		return;
 	}
@@ -2152,7 +2164,7 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 			data = *(byte *)at;
 			at += 1;
 #ifdef SAVING_ANYWHERE
-			_bytesSavedLoaded ++;
+			_bytesSavedLoaded++;
 #endif
 		} else if (datasize == 2) {
 			data = *(uint16 *)at;
@@ -2241,7 +2253,7 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 			*(byte *)at = (byte)data;
 			at += 1;
 #ifdef SAVING_ANYWHERE
-			_bytesSavedLoaded ++;
+			_bytesSavedLoaded++;
 #endif
 		} else if (datasize == 2) {
 			*(uint16 *)at = (uint16)data;

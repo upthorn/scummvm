@@ -49,10 +49,8 @@ namespace Scumm {
  */
 #ifdef SAVING_ANYWHERE
 #define VER_ANYWHERE 93 // woops, sleVersions are limited to 8 bits
-#define CURRENT_VER VER_ANYWHERE
-#else
-#define CURRENT_VER 92
 #endif
+#define CURRENT_VER 93
 
 /**
  * An auxillary macro, used to specify savegame versions. We use this instead
