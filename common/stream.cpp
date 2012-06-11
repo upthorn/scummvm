@@ -420,6 +420,7 @@ protected:
 	WriteStream *_parentStream;
 	byte *_buf;
 	uint32 _pos;
+	uint32 _filePos;
 	const uint32 _bufSize;
 
 	/**
@@ -444,6 +445,7 @@ public:
 	BufferedWriteStream(WriteStream *parentStream, uint32 bufSize)
 		: _parentStream(parentStream),
 		_pos(0),
+		_filePos(0),
 		_bufSize(bufSize) {
 
 		assert(parentStream);
@@ -473,12 +475,20 @@ public:
 		} else	{	// too big for our buffer
 			const bool flushResult = flushBuffer();
 			assert(flushResult);
-			return _parentStream->write(dataPtr, dataSize);
+			uint32 ret = _parentStream->write(dataPtr, dataSize);
+			_filePos += ret;
+			return ret;
 		}
+		_filePos += dataSize;
 		return dataSize;
 	}
 
 	virtual bool flush() { return flushBuffer(); }
+	int32 pos() const {
+		if (err())
+			return -1;
+		return _filePos;
+	}
 
 };
 

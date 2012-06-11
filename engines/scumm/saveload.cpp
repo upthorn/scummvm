@@ -2053,43 +2053,41 @@ void ScummEngine::loadResource(Serializer *ser, ResType type, ResId idx) {
 	}
 }
 
+int32 Serializer::bytesSavedLoaded() { 
+	if (isSaving())
+		return _saveStream->pos(); 
+	return _loadStream->pos();
+}
+
 void Serializer::saveBytes(void *b, int len) {
 	_saveStream->write(b, len);
-	_bytesSavedLoaded += len;
 }
 
 void Serializer::loadBytes(void *b, int len) {
 	_loadStream->read(b, len);
-	_bytesSavedLoaded += len;
 }
 
 void Serializer::saveUint32(uint32 d) {
 	_saveStream->writeUint32LE(d);
-	_bytesSavedLoaded += 4;
 }
 
 void Serializer::saveUint16(uint16 d) {
 	_saveStream->writeUint16LE(d);
-	_bytesSavedLoaded += 2;
 }
 
 void Serializer::saveByte(byte b) {
 	_saveStream->writeByte(b);
-	_bytesSavedLoaded++;
 }
 
 uint32 Serializer::loadUint32() {
-	_bytesSavedLoaded += 4;
 	return _loadStream->readUint32LE();
 }
 
 uint16 Serializer::loadUint16() {
-	_bytesSavedLoaded += 2;
 	return _loadStream->readUint16LE();
 }
 
 byte Serializer::loadByte() {
-	_bytesSavedLoaded++;
 	return _loadStream->readByte();
 }
 
@@ -2103,7 +2101,6 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 			Common::String &str = strArr[i];
 			uint32 size = str.size();
 			_saveStream->writeUint32LE(size);
-			_bytesSavedLoaded += 4;
 			saveBytes((void *)str.c_str(), size);
 		}
 		return;
@@ -2124,15 +2121,12 @@ void Serializer::saveArrayOf(void *b, int len, int datasize, byte filetype) {
 		} else if (datasize == 1) {
 			data = *(byte *)at;
 			at += 1;
-			_bytesSavedLoaded++;
 		} else if (datasize == 2) {
 			data = *(uint16 *)at;
 			at += 2;
-			_bytesSavedLoaded += 2;
 		} else if (datasize == 4) {
 			data = *(uint32 *)at;
 			at += 4;
-			_bytesSavedLoaded += 4;
 		} else {
 			error("saveArrayOf: invalid size %d", datasize);
 		}
@@ -2162,7 +2156,6 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 		Common::String *strArr = (Common::String *)b;
 		for (int i = 0; i < len; i++) {
 			uint32 size = _loadStream->readUint32LE();
-			_bytesSavedLoaded += 4;
 			char *cStr = new char[size];
 			loadBytes(cStr, size);
 			Common::String &str = strArr[i];
@@ -2204,15 +2197,12 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 		} else if (datasize == 1) {
 			*(byte *)at = (byte)data;
 			at += 1;
-			_bytesSavedLoaded++;
 		} else if (datasize == 2) {
 			*(uint16 *)at = (uint16)data;
 			at += 2;
-			_bytesSavedLoaded += 2;
 		} else if (datasize == 4) {
 			*(uint32 *)at = data;
 			at += 4;
-			_bytesSavedLoaded += 4;
 		} else {
 			error("loadArrayOf: invalid size %d", datasize);
 		}

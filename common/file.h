@@ -139,6 +139,7 @@ class DumpFile : public WriteStream, public NonCopyable {
 protected:
 	/** File handle to the actual file; 0 if no file is open. */
 	WriteStream *_handle;
+	uint32 _pos;
 
 public:
 	DumpFile();
@@ -160,7 +161,11 @@ public:
 	void clearErr();
 
 	virtual uint32 write(const void *dataPtr, uint32 dataSize);
-
+	int32 pos() const {
+		if (err())
+			return -1;
+		return _pos;
+	}
 	virtual bool flush();
 };
 

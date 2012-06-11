@@ -127,8 +127,7 @@ public:
 
 	Serializer(Common::SeekableReadStream *in, Common::WriteStream *out, uint32 savegameVersion)
 		: _loadStream(in), _saveStream(out),
-		  _savegameVersion(savegameVersion), 
-		  _bytesSavedLoaded(0)
+		  _savegameVersion(savegameVersion)
 	{ }
 
 
@@ -139,7 +138,7 @@ public:
 	bool isSaving() { return (_saveStream != 0); }
 	bool isLoading() { return (_loadStream != 0); }
 	uint32 getVersion() { return _savegameVersion; }
-	uint32 bytesSavedLoaded() { return _bytesSavedLoaded; }
+	int32 bytesSavedLoaded();
 
 	void saveUint32(uint32 d);
 	void saveUint16(uint16 d);
@@ -156,7 +155,6 @@ protected:
 	Common::SeekableReadStream *_loadStream;
 	Common::WriteStream *_saveStream;
 	uint32 _savegameVersion;
-	uint32 _bytesSavedLoaded;
 
 	void saveArrayOf(void *b, int len, int datasize, byte filetype);
 	void loadArrayOf(void *b, int len, int datasize, byte filetype);

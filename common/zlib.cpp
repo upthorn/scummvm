@@ -240,6 +240,7 @@ protected:
 	};
 
 	byte	_buf[BUFSIZE];
+	uint32	_pos;
 	ScopedPtr<WriteStream> _wrapped;
 	z_stream _stream;
 	int _zlibErr;
@@ -260,7 +261,7 @@ protected:
 	}
 
 public:
-	GZipWriteStream(WriteStream *w) : _wrapped(w), _stream() {
+	GZipWriteStream(WriteStream *w) : _wrapped(w), _stream(), _pos(0) {
 		assert(w != 0);
 
 		// Adding 16 to windowBits indicates to zlib that it is supposed to
@@ -329,9 +330,16 @@ public:
 
 		// ... and flush it to disk
 		processData(Z_NO_FLUSH);
-
+		_pos += dataSize;
 		return dataSize - _stream.avail_in;
 	}
+
+	int32 pos() const {
+		if (err()) 
+			return -1;
+		return _pos;
+	}
+
 };
 
 #endif	// USE_ZLIB

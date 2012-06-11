@@ -105,7 +105,11 @@ public:
 		return dataSize;
 	}
 
-	uint32 pos() const { return _pos; }
+	int32 pos() const { 
+		if (err())
+			return -1;
+		return _pos; 
+	}
 	uint32 size() const { return _bufSize; }
 };
 
@@ -158,7 +162,11 @@ public:
 		return dataSize;
 	}
 
-	uint32 pos() const { return _pos; }
+	int32 pos() const { 
+		if (err()) 
+			return -1;
+		return _pos; 
+	}
 	uint32 size() const { return _size; }
 
 	byte *getData() { return _data; }

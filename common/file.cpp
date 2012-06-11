@@ -142,7 +142,7 @@ uint32 File::read(void *ptr, uint32 len) {
 }
 
 
-DumpFile::DumpFile() : _handle(0) {
+DumpFile::DumpFile() : _handle(0), _pos(0) {
 }
 
 DumpFile::~DumpFile() {
@@ -194,7 +194,9 @@ void DumpFile::clearErr() {
 
 uint32 DumpFile::write(const void *ptr, uint32 len) {
 	assert(_handle);
-	return _handle->write(ptr, len);
+	uint32 ret = _handle->write(ptr, len);
+	_pos += ret;
+	return ret;
 }
 
 bool DumpFile::flush() {
