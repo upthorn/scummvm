@@ -1443,16 +1443,9 @@ void Sprite::saveOrLoadSpriteData(Serializer *s) {
 		s->saveLoadArrayOf(_spriteGroups, _varNumSpriteGroups, sizeof(_spriteGroups[0]), spriteGroupEntries);
 	}
 
-	if (s->getVersion() >= VER(VER_ANYWHERE)) {
-		if (s->isSaving()) {
-			s->saveUint32(_numSpritesToProcess);
-		} else {
-			_numSpritesToProcess = s->loadUint32();
-		}
-	}
-/*	// Reset active sprite table
+	// Reset active sprite table
 	if (s->isLoading())
-		_numSpritesToProcess = 0; */
+		_numSpritesToProcess = 0;
 
 }
 

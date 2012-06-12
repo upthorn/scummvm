@@ -1734,12 +1734,14 @@ void ScummEngine_v70he::saveOrLoad(Serializer *s) {
 				free(_heV7RoomIntOffsets);
 			if (_storedFlObjects)
 				memset(_storedFlObjects, 0, _numStoredFlObjects * sizeof(ObjectData));
-			_heV7DiskOffsets = (byte *)malloc(_numHeV7DiskOffsets);
-			_heV7RoomOffsets = (byte *)malloc(_numHeV7RoomOffsets * 4 + 2);
+			_heV7DiskOffsets = (_numHeV7DiskOffsets) ? (byte *)malloc(_numHeV7DiskOffsets) : NULL;
+			_heV7RoomOffsets = (_numHeV7RoomOffsets) ? (byte *)malloc(_numHeV7RoomOffsets * 4 + 2) : NULL;
 			_heV7RoomIntOffsets = (uint32 *)calloc(_numRooms, sizeof(uint32));
 		}
-		s->saveLoadArrayOf(_heV7DiskOffsets, _numHeV7DiskOffsets, sizeof(_heV7DiskOffsets[0]), sleByte);
-		s->saveLoadArrayOf(_heV7RoomOffsets, _numHeV7RoomOffsets, sizeof(_heV7RoomOffsets[0]), sleByte);
+		if (_heV7DiskOffsets) 
+			s->saveLoadArrayOf(_heV7DiskOffsets, _numHeV7DiskOffsets, sizeof(_heV7DiskOffsets[0]), sleByte);
+		if (_heV7RoomOffsets) 
+			s->saveLoadArrayOf(_heV7RoomOffsets, _numHeV7RoomOffsets * 4 + 2, sizeof(_heV7RoomOffsets[0]), sleByte);
 		s->saveLoadArrayOf(_heV7RoomIntOffsets, _numRooms, sizeof(_heV7RoomIntOffsets[0]), sleInt32);
 		s->saveLoadArrayOf(_storedFlObjects, _numStoredFlObjects, sizeof(_storedFlObjects[0]), HEObjectDataEntries);
 	}
@@ -2156,8 +2158,9 @@ void Serializer::loadArrayOf(void *b, int len, int datasize, byte filetype) {
 		Common::String *strArr = (Common::String *)b;
 		for (int i = 0; i < len; i++) {
 			uint32 size = _loadStream->readUint32LE();
-			char *cStr = new char[size];
+			char *cStr = new char[size + 1];
 			loadBytes(cStr, size);
+			cStr[size] = '\0';
 			Common::String &str = strArr[i];
 			str.clear();
 			str += cStr;
