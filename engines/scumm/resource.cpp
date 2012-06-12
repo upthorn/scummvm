@@ -385,18 +385,14 @@ void ScummEngine_v70he::readIndexBlock(uint32 blocktype, uint32 itemsize) {
 		_fileHandle->seek(-2, SEEK_CUR);
 		_heV7RoomOffsets = (byte *)calloc(2 + (i * 4), 1);
 		_fileHandle->read(_heV7RoomOffsets, (2 + (i * 4)) );
-#ifdef SAVING_ANYWHERE
 		_numHeV7RoomOffsets = i;
-#endif
 		break;
 
 	case MKTAG('D','I','S','K'):
 		i = _fileHandle->readUint16LE();
 		_heV7DiskOffsets = (byte *)calloc(i, 1);
 		_fileHandle->read(_heV7DiskOffsets, i);
-#ifdef SAVING_ANYWHERE
 		_numHeV7DiskOffsets = i;
-#endif
 		break;
 
 	case MKTAG('S','V','E','R'):

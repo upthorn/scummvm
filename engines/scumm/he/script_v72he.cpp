@@ -1411,16 +1411,12 @@ void ScummEngine_v72he::o72_openFile() {
 			} else {
 				_hInFileTable[slot] = SearchMan.createReadStreamForMember(filename);
 			}
-#ifdef SAVING_ANYWHERE
 			_hInFilenameTable[slot] = filename;
-#endif
 			break;
 		case 2:   // Write mode
 			if (!strchr(filename, '/')) {
 				_hOutFileTable[slot] = _saveFileMan->openForSaving(filename);
-#ifdef SAVING_ANYWHERE
 				_hOutFilenameTable[slot] = filename;
-#endif
 			}
 			break;
 		case 6: { // Append mode
@@ -1446,9 +1442,7 @@ void ScummEngine_v72he::o72_openFile() {
 
 			// Attempt to open a save file
 			_hOutFileTable[slot] = _saveFileMan->openForSaving(filename);
-#ifdef SAVING_ANYWHERE
 			_hOutFilenameTable[slot] = filename;
-#endif
 
 			// Begin us off with the data from the previous file
 			if (_hOutFileTable[slot] && initialData) {
