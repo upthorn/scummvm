@@ -46,13 +46,14 @@ protected:
 	Audio::SoundHandle _heSoundChannels[8];
 
 public: // Used by createSound()
-	struct {
+	struct HeChannel {
 		int sound;
 		int codeOffs;
 		int priority;
 		int rate;
 		int timer;
 		int sbngBlock;
+		int flags;
 		int soundVars[27];
 	} _heChannel[8];
 
@@ -81,6 +82,7 @@ public:
 	void setupHEMusicFile();
 	void startHETalkSound(uint32 offset);
 	void stopSoundChannel(int chan);
+	void saveLoadWithSerializer(Serializer *ser);
 
 protected:
 	virtual void processSoundQueues();

@@ -160,6 +160,7 @@ void SoundHE::stopSound(int sound) {
 			_heChannel[i].timer = 0;
 			_heChannel[i].sbngBlock = 0;
 			_heChannel[i].codeOffs = 0;
+			_heChannel[i].flags = 0;
 			memset(_heChannel[i].soundVars, 0, sizeof(_heChannel[i].soundVars));
 		}
 	}
@@ -199,6 +200,7 @@ void SoundHE::stopSoundChannel(int chan) {
 	_heChannel[chan].timer = 0;
 	_heChannel[chan].sbngBlock = 0;
 	_heChannel[chan].codeOffs = 0;
+	_heChannel[chan].flags = 0;
 	memset(_heChannel[chan].soundVars, 0, sizeof(_heChannel[chan].soundVars));
 
 	for (int i = 0; i < ARRAYSIZE(_soundQue2); i++) {
@@ -411,6 +413,7 @@ void SoundHE::processSoundCode() {
 			_heChannel[chan].timer = 0;
 			_heChannel[chan].sbngBlock = 0;
 			_heChannel[chan].codeOffs = 0;
+			_heChannel[chan].flags = 0;
 			_heChannel[chan].soundVars[0] = 0;
 		}
 	}
@@ -630,6 +633,7 @@ void SoundHE::playHESound(int soundID, int heOffset, int heChannel, int heFlags)
 		_heChannel[heChannel].rate = rate;
 		_heChannel[heChannel].sbngBlock = (codeOffs != -1) ? 1 : 0;
 		_heChannel[heChannel].codeOffs = codeOffs;
+		_heChannel[heChannel].flags = heFlags;
 		memset(_heChannel[heChannel].soundVars, 0, sizeof(_heChannel[heChannel].soundVars));
 
 		// TODO: Extra sound flags
@@ -716,6 +720,7 @@ void SoundHE::playHESound(int soundID, int heOffset, int heChannel, int heFlags)
 		_heChannel[heChannel].rate = rate;
 		_heChannel[heChannel].sbngBlock = (codeOffs != -1) ? 1 : 0;
 		_heChannel[heChannel].codeOffs = codeOffs;
+		_heChannel[heChannel].flags = heFlags;
 		memset(_heChannel[heChannel].soundVars, 0, sizeof(_heChannel[heChannel].soundVars));
 
 		// TODO: Extra sound flags
@@ -931,6 +936,27 @@ void ScummEngine_v80he::createSound(int snd1id, int snd2id) {
 
 		_sndPtrOffs = sdat2size - sdat1size;
 		_sndTmrOffs += sdat2size;
+	}
+}
+
+void SoundHE::saveLoadWithSerializer(Serializer *ser) {
+	Sound::saveLoadWithSerializer(ser);
+	const SaveLoadEntry HeChannelEntries [] = {
+		MKLINE(HeChannel, sound, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, codeOffs, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, priority, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, rate, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, timer, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, sbngBlock, sleUint32, VER(VER_ANYWHERE)), 
+		MKLINE(HeChannel, flags, sleUint32, VER(VER_ANYWHERE)), 
+		MKARRAY(HeChannel, soundVars, sleUint32, ARRAYSIZE(((HeChannel *)42)->HeChannel::soundVars), VER(VER_ANYWHERE)),
+		MKEND()
+	};
+	for (uint i = 0; i < 8; i++) {
+		if (_mixer->isSoundHandleActive(_heSoundChannels[i])) {
+			ser->saveLoadEntries(&_heChannel[i], HeChannelEntries);
+			Audio::AudioStream *stream = _mixer->getAudioStream(_heSoundChannels[i]);
+		}
 	}
 }
 #endif
