@@ -118,7 +118,7 @@ public:
 	virtual int getVolumeForSoundType(SoundType type) const;
 
 	virtual uint getOutputRate() const;
-
+	virtual AudioStream *getAudioStream(SoundHandle handle);
 protected:
 	void insertChannel(SoundHandle *handle, Channel *chan);
 

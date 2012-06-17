@@ -142,6 +142,11 @@ public:
 	 */
 	SoundHandle getHandle() const { return _handle; }
 
+	/**
+	 * Get a pointer to the channel's audio stream
+	 */ 
+	AudioStream *getAudioStream() { return _stream.get(); }
+
 private:
 	const Mixer::SoundType _type;
 	SoundHandle _handle;
@@ -481,6 +486,14 @@ int MixerImpl::getVolumeForSoundType(SoundType type) const {
 
 	return _soundTypeSettings[type].volume;
 }
+
+AudioStream *MixerImpl::getAudioStream(SoundHandle handle) { 
+	if (isSoundHandleActive(handle)) {
+		const int index = handle._val % NUM_CHANNELS;
+		return _channels[index]->getAudioStream();
+	} else return NULL;
+}
+
 
 
 #pragma mark -

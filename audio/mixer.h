@@ -277,6 +277,14 @@ public:
 	 * @return the output sample rate in Hz
 	 */
 	virtual uint getOutputRate() const = 0;
+
+	/**
+	 * Get the stream associated with an active SoundHandle.
+	 *
+	 * @param handle the sound handle
+	 * @return pointer to the associated AudioStream (or NULL if handle inactive)
+	 */
+	virtual AudioStream *getAudioStream(SoundHandle handle) = 0;
 };
 
 
