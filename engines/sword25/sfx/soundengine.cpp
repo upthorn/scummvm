@@ -325,20 +325,26 @@ bool SoundEngine::canLoadResource(const Common::String &fileName) {
 }
 
 
-	bool SoundEngine::persist(OutputPersistenceBlock &writer) {
+bool SoundEngine::persist(OutputPersistenceBlock &writer) {
 	writer.write(_maxHandleId);
 
 	for (uint i = 0; i < SOUND_HANDLES; i++) {
-		writer.write(_handles[i].id);
 
-		writer.writeString(_handles[i].fileName);
-		writer.write((int)_handles[i].sndType);
-		writer.write(_handles[i].volume);
-		writer.write(_handles[i].pan);
-		writer.write(_handles[i].loop);
-		writer.write(_handles[i].loopStart);
-		writer.write(_handles[i].loopEnd);
-		writer.write(_handles[i].layer);
+		// Important, because engine was crashing on load of invalid handles
+		writer.write((uint32) (_handles[i].type));
+
+		// No point in saving garbage data
+		if (_handles[i].type == kAllocatedHandle) {
+			writer.write(_handles[i].id);
+			writer.writeString(_handles[i].fileName);
+			writer.write((int)_handles[i].sndType);
+			writer.write(_handles[i].volume);
+			writer.write(_handles[i].pan);
+			writer.write(_handles[i].loop);
+			writer.write(_handles[i].loopStart);
+			writer.write(_handles[i].loopEnd);
+			writer.write(_handles[i].layer);
+		}
 	}
 
 	return true;
@@ -353,30 +359,36 @@ bool SoundEngine::unpersist(InputPersistenceBlock &reader) {
 	reader.read(_maxHandleId);
 
 	for (uint i = 0; i < SOUND_HANDLES; i++) {
-		reader.read(_handles[i].id);
+		uint32 handleType;
+		reader.read(handleType);
 
-		Common::String fileName;
-		int sndType;
-		float volume;
-		float pan;
-		bool loop;
-		int loopStart;
-		int loopEnd;
-		uint layer;
-		
-		reader.readString(fileName);
-		reader.read(sndType);
-		reader.read(volume);
-		reader.read(pan);
-		reader.read(loop);
-		reader.read(loopStart);
-		reader.read(loopEnd);
-		reader.read(layer);
+		// Only load handles that were actually saved
+		if (handleType == kAllocatedHandle) {
+			reader.read(_handles[i].id);
 
-		if (reader.isGood()) {
-			playSoundEx(fileName, (SOUND_TYPES)sndType, volume, pan, loop, loopStart, loopEnd, layer, i);
-		} else
-			return false;
+			Common::String fileName;
+			int sndType;
+			float volume;
+			float pan;
+			bool loop;
+			int loopStart;
+			int loopEnd;
+			uint layer;		
+
+			reader.readString(fileName);
+			reader.read(sndType);
+			reader.read(volume);
+			reader.read(pan);
+			reader.read(loop);
+			reader.read(loopStart);
+			reader.read(loopEnd);
+			reader.read(layer);
+
+			if (reader.isGood() ) {
+				playSoundEx(fileName, (SOUND_TYPES)sndType, volume, pan, loop, loopStart, loopEnd, layer, i);
+			} else
+				return false;
+		}
 	}
 
 	return reader.isGood();
