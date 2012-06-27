@@ -309,6 +309,8 @@ public:
 	Common::String getSavegameFilename(int slot);
 	uint16 **loadLongArray(Common::SeekableReadStream &in);
 
+	void updateLastSaveTime();
+
 	FileManager *_file;
 	Scheduler *_scheduler;
 	Screen *_screen;
@@ -333,6 +335,7 @@ private:
 	status_t _status;                               // Game status structure
 	uint32 _lastTime;
 	uint32 _curTime;
+	uint32 _lastSaveTime;
 
 	static HugoEngine *s_Engine;
 

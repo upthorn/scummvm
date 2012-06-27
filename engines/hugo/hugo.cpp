@@ -131,11 +131,11 @@ void HugoEngine::setMaxScore(const int newScore) {
 }
 
 Common::Error HugoEngine::saveGameState(int slot, const Common::String &desc) {
-	return (_file->saveGame(slot, desc) ? Common::kWritingFailed : Common::kNoError);
+	return (_file->saveGame(slot, desc) ? Common::kNoError : Common::kWritingFailed);
 }
 
 Common::Error HugoEngine::loadGameState(int slot) {
-	return (_file->restoreGame(slot) ? Common::kReadingFailed : Common::kNoError);
+	return (_file->restoreGame(slot) ? Common::kNoError : Common::kReadingFailed);
 }
 
 bool HugoEngine::hasFeature(EngineFeature f) const {
@@ -165,6 +165,10 @@ void HugoEngine::gameOverMsg() {
 	Utils::notifyBox(_text->getTextUtil(kGameOver));
 }
 
+void HugoEngine::updateLastSaveTime() {  
+	_lastSaveTime = _system->getMillis();
+}
+
 Common::Error HugoEngine::run() {
 	s_Engine = this;
 	initGraphics(320, 200, false);
@@ -180,6 +184,8 @@ Common::Error HugoEngine::run() {
 	_text = new TextHandler(this);
 
 	_topMenu = new TopMenu(this);
+
+	_lastSaveTime = _system->getMillis();
 
 	switch (_gameVariant) {
 	case kGameVariantH1Win: // H1 Win
@@ -270,6 +276,11 @@ Common::Error HugoEngine::run() {
 		_screen->drawBoundaries();
 		g_system->updateScreen();
 		runMachine();
+
+		// TODO: work out better autosave slot solution than slot 99, so user doesn't have to scroll so far
+		if (shouldPerformAutoSave(_lastSaveTime) && canSaveGameStateCurrently()) {
+			_file->saveGame(99, "Autosave");
+		}
 
 		// Handle input
 		Common::Event event;

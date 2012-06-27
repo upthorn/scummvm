@@ -427,6 +427,8 @@ bool FileManager::saveGame(const int16 slot, const Common::String &descrip) {
 
 	delete out;
 
+	_vm->updateLastSaveTime();
+
 	return true;
 }
 
@@ -525,6 +527,9 @@ bool FileManager::restoreGame(const int16 slot) {
 
 
 	delete in;
+
+	// Don't perform autosave immediately after load.
+	_vm->updateLastSaveTime();
 	return true;
 }
 
