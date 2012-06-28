@@ -95,6 +95,9 @@ Common::Error LureEngine::init() {
 	// Setup mixer
 	syncSoundSettings();
 
+	// Initialize autosave timer
+	updateLastSavedTime();
+
 	return Common::kNoError;
 }
 
@@ -202,6 +205,9 @@ bool LureEngine::saveGame(uint8 slotNumber, Common::String &caption) {
 	Fights.saveToStream(f);
 	Room::getReference().saveToStream(f);
 
+	// Update autosave timer
+	updateLastSavedTime();
+
 	delete f;
 	return true;
 }
@@ -242,6 +248,9 @@ bool LureEngine::loadGame(uint8 slotNumber) {
 	Sound.loadFromStream(f);
 	Fights.loadFromStream(f);
 	Room::getReference().loadFromStream(f);
+
+	// Update autosave timer
+	updateLastSavedTime();
 
 	delete f;
 	return true;

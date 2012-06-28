@@ -78,6 +78,7 @@ private:
 	Room *_room;
 	FightsManager *_fights;
 	Common::RandomSource _rnd;
+	uint32 _lastSaveTime;
 
 	const char *generateSaveName(int slotNumber);
 
@@ -102,6 +103,12 @@ public:
 	virtual bool hasFeature(EngineFeature f) const;
 	virtual void syncSoundSettings();
 	virtual void pauseEngineIntern(bool pause);
+	bool shouldPerformAutoSave() {
+		return Engine::shouldPerformAutoSave(_lastSaveTime);
+	}
+	void updateLastSavedTime() {
+		_lastSaveTime = _system->getMillis();
+	}
 
 	Disk &disk() { return *_disk; }
 
@@ -121,11 +128,11 @@ public:
 	bool isEGA() const { return (getFeatures() & GF_EGA) != 0; }
 
 	virtual Common::Error loadGameState(int slot) {
-		return loadGame(slot) ? Common::kReadingFailed : Common::kNoError;
+		return loadGame(slot) ? Common::kNoError : Common::kReadingFailed;
 	}
 	virtual Common::Error saveGameState(int slot, const Common::String &desc) {
 		Common::String s(desc);
-		return saveGame(slot, s) ? Common::kReadingFailed : Common::kNoError;
+		return saveGame(slot, s) ? Common::kNoError : Common::kWritingFailed;
 	}
 	virtual bool canLoadGameStateCurrently() {
 		return _saveLoadAllowed && !Fights.isFighting();

@@ -186,6 +186,11 @@ void Game::execute() {
 				tickCheck();
 			}
 
+			if (engine.shouldPerformAutoSave() && engine.canSaveGameStateCurrently()) {
+				Common::String desc = "Autosave";
+				engine.saveGame(0, desc);
+			}
+
 			while (events.pollEvent()) {
 				if (events.type() == Common::EVENT_KEYDOWN) {
 					uint16 roomNum = room.roomNumber();
