@@ -198,6 +198,9 @@ Common::Error DrasculaEngine::run() {
 
 	checkCD();
 
+	// Init the autosave counter
+	_lastSaveTime = _system->getMillis();
+
 	while (!shouldQuit()) {
 		int i;
 		takeObject = 0;
@@ -493,6 +496,19 @@ bool DrasculaEngine::runCurrentChapter() {
 		}
 
 		delay(25);
+
+
+		if (shouldPerformAutoSave(_lastSaveTime)) {
+			saveGame(Common::String::format("%s09", _targetName.c_str()).c_str());
+
+			// Load existing save names so we don't overwrite the index with garbage
+			loadSaveNames();
+
+			// Update the slot 9 save description.
+			strcpy(_saveNames[9], "Autosave");
+			saveSaveNames();
+		}
+
 #ifndef _WIN32_WCE
 		// FIXME
 		// This and the following #ifndefs disable the excess updateEvents() calls *within* the game loop.

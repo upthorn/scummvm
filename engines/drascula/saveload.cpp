@@ -240,6 +240,9 @@ bool DrasculaEngine::loadGame(const char *gameName) {
 	enterRoom(roomNum);
 	selectVerb(kVerbNone);
 
+	// Reset the autosave counter
+	_lastSaveTime = _system->getMillis();
+
 	return true;
 }
 
@@ -270,6 +273,9 @@ void DrasculaEngine::saveGame(const char *gameName) {
 	out->finalize();
 	if (out->err())
 		warning("Can't write file '%s'. (Disk full?)", gameName);
+
+	// Reset the autosave counter
+	_lastSaveTime = _system->getMillis();
 
 	delete out;
 }

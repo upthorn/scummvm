@@ -738,6 +738,7 @@ private:
 
 	CharInfo *_charMap;
 	int _charMapSize;
+	uint32 _lastSaveTime;
 
 	int _itemLocationsSize;
 	int _polXSize;
