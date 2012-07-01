@@ -182,12 +182,15 @@ void LureEngine::pauseEngineIntern(bool pause) {
 
 const char *LureEngine::generateSaveName(int slotNumber) {
 	static char buffer[15];
-
-	sprintf(buffer, "lure.%.3d", slotNumber);
+	if (slotNumber == -2) {
+		sprintf(buffer, "_%s.asv", _targetName.c_str());
+	} else {
+		sprintf(buffer, "lure.%.3d", slotNumber);
+	}
 	return buffer;
 }
 
-bool LureEngine::saveGame(uint8 slotNumber, Common::String &caption) {
+bool LureEngine::saveGame(int slotNumber, Common::String &caption) {
 	Common::WriteStream *f = this->_saveFileMan->openForSaving(
 		generateSaveName(slotNumber));
 	if (f == NULL)
@@ -214,7 +217,7 @@ bool LureEngine::saveGame(uint8 slotNumber, Common::String &caption) {
 
 #define FAILED_MSG "loadGame: Failed to load slot %d"
 
-bool LureEngine::loadGame(uint8 slotNumber) {
+bool LureEngine::loadGame(int slotNumber) {
 	Common::ReadStream *f = this->_saveFileMan->openForLoading(
 		generateSaveName(slotNumber));
 	if (f == NULL)

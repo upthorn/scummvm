@@ -114,8 +114,8 @@ public:
 
 	Common::RandomSource &rnd() { return _rnd; }
 	int gameToLoad() { return _gameToLoad; }
-	bool loadGame(uint8 slotNumber);
-	bool saveGame(uint8 slotNumber, Common::String &caption);
+	bool loadGame(int slotNumber);
+	bool saveGame(int slotNumber, Common::String &caption);
 	Common::String *detectSave(int slotNumber);
 	uint8 saveVersion() { return _saveVersion; }
 	void GUIError(const char *msg, ...) GCC_PRINTF(2, 3);
