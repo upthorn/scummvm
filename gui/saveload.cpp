@@ -325,11 +325,20 @@ void SaveLoadChooser::updateSaveList() {
 
 	int curSlot = 0;
 	int saveSlot = 0;
+	bool autoSaveFound = false;
+	int maximumSaveSlots = (*_plugin)->getMaximumSaveSlot();
 	StringArray saveNames;
 	ListWidget::ColorList colors;
 	for (SaveStateList::const_iterator x = _saveList.begin(); x != _saveList.end(); ++x) {
+		saveSlot = x->getSaveSlot() + (autoSaveFound ? 1 : 0);
+
+		// Don't use up a slot for an autosave
+		if (saveSlot < 0) { 
+			maximumSaveSlots++;
+			autoSaveFound = true;
+		}
+
 		// Handle gaps in the list of save games
-		saveSlot = x->getSaveSlot();
 		if (curSlot < saveSlot) {
 			while (curSlot < saveSlot) {
 				SaveStateDescriptor dummySave(curSlot, "");
@@ -362,8 +371,6 @@ void SaveLoadChooser::updateSaveList() {
 	}
 
 	// Fill the rest of the save slots with empty saves
-
-	int maximumSaveSlots = (*_plugin)->getMaximumSaveSlot();
 
 #ifdef __DS__
 	// Low memory on the DS means too many save slots are impractical, so limit
