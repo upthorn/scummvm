@@ -179,10 +179,20 @@ SaveStateList HugoMetaEngine::listSaves(const char *target) const {
 	Common::String pattern = target;
 	pattern += "-??.SAV";
 
+	// check for the existence of an autosave
+	Common::String autoSaveName = Common::String::format("_%s.asv", target);
+	bool autoSavePresent = !(saveFileMan->listSavefiles(autoSaveName).empty());
+
 	filenames = saveFileMan->listSavefiles(pattern);
 	sort(filenames.begin(), filenames.end());   // Sort (hopefully ensuring we are sorted numerically..)
 
 	SaveStateList saveList;
+
+	// if there is an autosave, put it in front of the list
+	if (autoSavePresent) {
+		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+	}
+
 	char slot[3];
 	int slotNum = 0;
 	for (Common::StringArray::const_iterator filename = filenames.begin(); filename != filenames.end(); ++filename) {

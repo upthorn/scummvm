@@ -264,7 +264,7 @@ Common::Error HugoEngine::run() {
 		_status.viewState = kViewIntroInit;
 
 		int16 loadSlot = Common::ConfigManager::instance().getInt("save_slot");
-		if (loadSlot >= 0) {
+		if ((loadSlot >= 0) || (loadSlot == -2)) {
 			_status.skipIntroFl = true;
 			_file->restoreGame(loadSlot);
 		} else {
@@ -715,7 +715,11 @@ void HugoEngine::syncSoundSettings() {
 }
 
 Common::String HugoEngine::getSavegameFilename(int slot) {
-	return _targetName + Common::String::format("-%02d.SAV", slot);
+	if (slot == -2) {
+		return Common::String::format("_%s.asv", _targetName.c_str());
+	} else {
+		return _targetName + Common::String::format("-%02d.SAV", slot);
+	}
 }
 
 

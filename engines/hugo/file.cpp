@@ -335,7 +335,7 @@ bool FileManager::saveGame(const int16 slot, const Common::String &descrip) {
 	Common::String savegameDescription;
 	EngineMan.findGame(_vm->getGameId(), &plugin);
 
-	if (slot == -1) {
+	 if (slot == -1) {
 		GUI::SaveLoadChooser *dialog = new GUI::SaveLoadChooser("Save game:", "Save");
 		dialog->setSaveMode(true);
 		savegameId = dialog->runModalWithPluginAndTarget(plugin, ConfMan.getActiveDomainName());
@@ -350,7 +350,7 @@ bool FileManager::saveGame(const int16 slot, const Common::String &descrip) {
 		}
 	}
 
-	if (savegameId < 0)                             // dialog aborted
+	if ((savegameId < 0) && (savegameId != -2))                             // dialog aborted
 		return false;
 
 	Common::String savegameFile = _vm->getSavegameFilename(savegameId);
@@ -451,7 +451,7 @@ bool FileManager::restoreGame(const int16 slot) {
 		savegameId = slot;
 	}
 
-	if (savegameId < 0)                             // dialog aborted
+	if ((savegameId < 0) && (savegameId != -2))                         // dialog aborted 
 		return false;
 
 	Common::String savegameFile = _vm->getSavegameFilename(savegameId);
