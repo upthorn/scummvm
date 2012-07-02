@@ -98,6 +98,9 @@ int SaveLoadChooser::runModalWithPluginAndTarget(const EnginePlugin *plugin, con
 
 	int ret = Dialog::runModal();
 
+	if ((ret > 0) && _autoSavePresent) 
+		ret--;
+
 	// Revert to the old active domain
 	ConfMan.setActiveDomain(oldDomain);
 
@@ -325,23 +328,23 @@ void SaveLoadChooser::updateSaveList() {
 
 	int curSlot = 0;
 	int saveSlot = 0;
-	bool autoSaveFound = false;
+	_autoSavePresent = false;
 	int maximumSaveSlots = (*_plugin)->getMaximumSaveSlot();
 	StringArray saveNames;
 	ListWidget::ColorList colors;
 	for (SaveStateList::const_iterator x = _saveList.begin(); x != _saveList.end(); ++x) {
-		saveSlot = x->getSaveSlot() + (autoSaveFound ? 1 : 0);
+		saveSlot = x->getSaveSlot() + (_autoSavePresent ? 1 : 0);
 
 		// Don't use up a slot for an autosave
-		if (saveSlot < 0) { 
+		if (saveSlot == -2) { 
 			maximumSaveSlots++;
-			autoSaveFound = true;
+			_autoSavePresent = true;
 		}
 
 		// Handle gaps in the list of save games
 		if (curSlot < saveSlot) {
 			while (curSlot < saveSlot) {
-				SaveStateDescriptor dummySave(curSlot, "");
+				SaveStateDescriptor dummySave(curSlot - (_autoSavePresent ? 1 : 0), "");
 				_saveList.insert_at(curSlot, dummySave);
 				saveNames.push_back(dummySave.getDescription());
 				colors.push_back(ThemeEngine::kFontColorNormal);
@@ -350,7 +353,7 @@ void SaveLoadChooser::updateSaveList() {
 
 			// Sync the save list iterator
 			for (x = _saveList.begin(); x != _saveList.end(); ++x) {
-				if (x->getSaveSlot() == saveSlot)
+				if ((x->getSaveSlot() + (_autoSavePresent ? 1 : 0)) == saveSlot)
 					break;
 			}
 		}
