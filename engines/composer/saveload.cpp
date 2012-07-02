@@ -267,7 +267,11 @@ void ComposerEngine::sync<Sprite> (Common::Serializer &ser, Sprite &data, Common
 
 }
 Common::String ComposerEngine::makeSaveGameName(int slot) {
-	return (_targetName + Common::String::format(".%02d", slot));
+	if (slot == -2) {
+		return Common::String::format("_%s.asv", _targetName.c_str());
+	} else {
+		return (_targetName + Common::String::format(".%02d", slot));
+	}
 }
 
 Common::Error ComposerEngine::loadGameState(int slot) {

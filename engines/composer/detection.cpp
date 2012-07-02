@@ -438,10 +438,20 @@ SaveStateList ComposerMetaEngine::listSaves(const char *target) const {
 	Common::String saveDesc;
 	Common::String pattern = Common::String::format("%s.??", target);
 
+	// check for the existence of an autosave
+	Common::String autoSaveName = Common::String::format("_%s.asv", target);
+	bool autoSavePresent = !(saveFileMan->listSavefiles(autoSaveName).empty());
+
 	filenames = saveFileMan->listSavefiles(pattern);
 	sort(filenames.begin(), filenames.end());	// Sort (hopefully ensuring we are sorted numerically..)
 
 	SaveStateList saveList;
+
+	// if there is an autosave, put it in front of the list
+	if (autoSavePresent) {
+		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+	}
+
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
 		// Obtain the last 3 digits of the filename, since they correspond to the save slot
 		int slotNum = atoi(file->c_str() + file->size() - 2);
