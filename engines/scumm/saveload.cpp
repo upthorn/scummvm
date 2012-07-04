@@ -589,13 +589,18 @@ bool ScummEngine::loadState(int slot, bool compat) {
 
 Common::String ScummEngine::makeSavegameName(const Common::String &target, int slot, bool temporary) {
 	Common::String extension;
-	extension = Common::String::format(".%c%02d", temporary ? 'c' : 's', slot);
-	return target + extension;
+	if (slot = -2) {
+		return "_" + target + ".asv";
+	} else {
+		extension = Common::String::format(".%c%02d", temporary ? 'c' : 's', slot);
+		return target + extension;
+	}
 }
 
 void ScummEngine::listSavegames(bool *marks, int num) {
 	assert(marks);
 
+	//TODO?: include autosaves in ingame savescreen
 	char slot[3];
 	int slotNum;
 	Common::StringArray files;
