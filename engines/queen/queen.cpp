@@ -181,7 +181,18 @@ SaveStateList QueenMetaEngine::listSaves(const char *target) const {
 	filenames = saveFileMan->listSavefiles(pattern);
 	sort(filenames.begin(), filenames.end());	// Sort (hopefully ensuring we are sorted numerically..)
 
+
+	// check for the existence of an autosave
+	Common::String autoSaveName = "queen.asd";
+	bool autoSavePresent = !(saveFileMan->listSavefiles(autoSaveName).empty());
+
 	SaveStateList saveList;
+	
+	// if there is an autosave, put it in front of the list
+	if (autoSavePresent) {
+		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+	}
+
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
 		// Obtain the last 2 digits of the filename, since they correspond to the save slot
 		int slotNum = atoi(file->c_str() + file->size() - 2);
