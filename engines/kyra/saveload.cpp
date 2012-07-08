@@ -235,12 +235,16 @@ const char *KyraEngine_v1::getSavegameFilename(int num) {
 }
 
 Common::String KyraEngine_v1::getSavegameFilename(const Common::String &target, int num) {
-	assert(num >= 0 && num <= 999);
-	return target + Common::String::format(".%03d", num);
+	if (num == -2) { 
+		return Common::String::format("_%s.asv", target.c_str());
+	} else {
+		assert(num >= 0 && num <= 999);
+		return target + Common::String::format(".%03d", num);
+	}
 }
 
 bool KyraEngine_v1::saveFileLoadable(int slot) {
-	if (slot < 0 || slot > 999)
+	if ((slot != -2) && (slot < 0 || slot > 999))
 		return false;
 
 	SaveHeader header;
@@ -256,7 +260,7 @@ bool KyraEngine_v1::saveFileLoadable(int slot) {
 
 void KyraEngine_v1::checkAutosave() {
 	if (shouldPerformAutoSave(_lastAutosave)) {
-		saveGameStateIntern(999, "Autosave", 0);
+		saveGameStateIntern(-2, "Autosave", 0);
 		_lastAutosave = _system->getMillis();
 	}
 }

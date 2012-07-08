@@ -244,11 +244,21 @@ SaveStateList KyraMetaEngine::listSaves(const char *target) const {
 	Common::String pattern = target;
 	pattern += ".???";
 
+	// check for the existence of an autosave
+	Common::String autoSaveName = Common::String::format("_%s.asv", target);
+	bool autoSavePresent = !(saveFileMan->listSavefiles(autoSaveName).empty());
+
 	Common::StringArray filenames;
 	filenames = saveFileMan->listSavefiles(pattern);
 	Common::sort(filenames.begin(), filenames.end());   // Sort (hopefully ensuring we are sorted numerically..)
 
 	SaveStateList saveList;
+
+	// if there is an autosave, put it in front of the list
+	if (autoSavePresent) {
+		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+	}
+
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {
 		// Skip automatic final saves made by EOB for the purpose of party transfer
 		if (!scumm_stricmp(file->c_str() + file->size() - 3, "fin"))
