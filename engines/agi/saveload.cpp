@@ -557,8 +557,12 @@ int AgiEngine::loadGame(const Common::String &fileName, bool checkId) {
 #define NUM_VISIBLE_SLOTS 12
 
 Common::String AgiEngine::getSavegameFilename(int num) const {
-	Common::String saveLoadSlot = _targetName;
-	saveLoadSlot += Common::String::format(".%.3d", num);
+	Common::String saveLoadSlot;
+	if (num == -2) {
+		saveLoadSlot = Common::String::format("_%s.asv", _targetName.c_str());
+	} else {
+		saveLoadSlot += Common::String::format("%s.%.3d", _targetName.c_str(), num);
+	}
 	return saveLoadSlot;
 }
 
