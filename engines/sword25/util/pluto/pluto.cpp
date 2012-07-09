@@ -92,6 +92,16 @@ static StkId getobject(lua_State *L, int stackpos)
 	}
 }
 
+/* Perist variable types with architecture dependent sizes */
+template<typename T>
+static void persistarcdep(PersistInfo *pi, T val) {
+	if (sizeof(T) < 8) {
+		T zero = 0;
+		pi->writer(pi->L, &zero, (8 - sizeof(T)), pi->ud);
+	}
+	pi->writer(pi->L, &val, sizeof(T), pi->ud);
+}
+
 /* Choose whether to do a regular or special persistence based on an object's
  * metatable. "default" is whether the object, if it doesn't have a __persist
  * entry, is literally persistable or not.
@@ -235,7 +245,7 @@ static void persistuserdata(PersistInfo *pi) {
 	} else {
 	/* Use literal persistence */
 		size_t length = uvalue(getobject(pi->L, -1))->len;
-		pi->writer(pi->L, &length, sizeof(size_t), pi->ud);
+		persistarcdep<size_t>(pi, length);
 		pi->writer(pi->L, lua_touserdata(pi->L, -1), length, pi->ud);
 		if(!lua_getmetatable(pi->L, -1)) {
 					/* perms reftbl ... udata */
@@ -518,7 +528,7 @@ static void persistthread(PersistInfo *pi)
 	/* Persist the stack */
 	posremaining = revappendstack(L2, pi->L);
 					/* perms reftbl ... thr (rev'ed contents of L2) */
-	pi->writer(pi->L, &posremaining, sizeof(size_t), pi->ud);
+	persistarcdep<size_t>(pi, posremaining);
 	for(; posremaining > 0; posremaining--) {
 		persist(pi);
 		lua_pop(pi->L, 1);
@@ -527,7 +537,7 @@ static void persistthread(PersistInfo *pi)
 	/* Now, persist the CallInfo stack. */
 	{
 		size_t i, numframes = (L2->ci - L2->base_ci) + 1;
-		pi->writer(pi->L, &numframes, sizeof(size_t), pi->ud);
+		persistarcdep<size_t>(pi, numframes);
 		for(i=0; i<numframes; i++) {
 			CallInfo *ci = L2->base_ci + i;
 			size_t stackbase = ci->base - L2->stack;
@@ -536,11 +546,11 @@ static void persistthread(PersistInfo *pi)
 			size_t savedpc = (ci != L2->base_ci) ?
 				ci->savedpc - ci_func(ci)->l.p->code :
 				0;
-			pi->writer(pi->L, &stackbase, sizeof(size_t), pi->ud);
-			pi->writer(pi->L, &stackfunc, sizeof(size_t), pi->ud);
-			pi->writer(pi->L, &stacktop, sizeof(size_t), pi->ud);
+			persistarcdep<size_t>(pi, stackbase);
+			persistarcdep<size_t>(pi, stackfunc);
+			persistarcdep<size_t>(pi, stacktop);
 			pi->writer(pi->L, &ci->nresults, sizeof(int), pi->ud);
-			pi->writer(pi->L, &savedpc, sizeof(size_t), pi->ud);
+			persistarcdep<size_t>(pi, savedpc);
 		}
 	}
 
@@ -550,9 +560,9 @@ static void persistthread(PersistInfo *pi)
 		size_t stacktop = L2->top - L2->stack;
 		lua_assert(L2->nCcalls <= 1);
 		pi->writer(pi->L, &L2->status, sizeof(lu_byte), pi->ud);
-		pi->writer(pi->L, &stackbase, sizeof(size_t), pi->ud);
-		pi->writer(pi->L, &stacktop, sizeof(size_t), pi->ud);
-		pi->writer(pi->L, &L2->errfunc, sizeof(ptrdiff_t), pi->ud);
+		persistarcdep<size_t>(pi, stackbase);
+		persistarcdep<size_t>(pi, stacktop);
+		persistarcdep<ptrdiff_t>(pi, L2->errfunc);
 	}
 
 	/* Finally, record upvalues which need to be reopened */
@@ -573,7 +583,7 @@ static void persistthread(PersistInfo *pi)
 			lua_pop(pi->L, 1);
 					/* perms reftbl ... thr */
 			stackpos = uv->v - L2->stack;
-			pi->writer(pi->L, &stackpos, sizeof(size_t), pi->ud);
+			persistarcdep<size_t>(pi, stackpos);
 		}
 					/* perms reftbl ... thr */
 		lua_pushnil(pi->L);
@@ -594,7 +604,7 @@ static void persistboolean(PersistInfo *pi)
 static void persistlightuserdata(PersistInfo *pi)
 {
 	void *p = lua_touserdata(pi->L, -1);
-	pi->writer(pi->L, &p, sizeof(void *), pi->ud);
+	persistarcdep<void *>(pi, p);
 }
 
 static void persistnumber(PersistInfo *pi)
@@ -606,7 +616,7 @@ static void persistnumber(PersistInfo *pi)
 static void persiststring(PersistInfo *pi)
 {
 	size_t length = lua_strlen(pi->L, -1);
-	pi->writer(pi->L, &length, sizeof(size_t), pi->ud);
+	persistarcdep<size_t>(pi, length);
 	pi->writer(pi->L, lua_tostring(pi->L, -1), length, pi->ud);
 }
 
@@ -624,14 +634,10 @@ static void persist(PersistInfo *pi)
 	if(!lua_isnil(pi->L, -1)) {
 					/* perms reftbl ... obj ref */
 		int zero = 0;
-		// FIXME: Casting a pointer to an integer data type is a bad idea we
-		// should really get rid of this by fixing the design of this code.
-		// For now casting to size_t should silence most (all?) compilers,
-		// since size_t is supposedly the same size as a pointer on most
-		// (modern) architectures.
-		int ref = (int)(size_t)lua_touserdata(pi->L, -1);
+
+		void *ref = lua_touserdata(pi->L, -1);
 		pi->writer(pi->L, &zero, sizeof(int), pi->ud);
-		pi->writer(pi->L, &ref, sizeof(int), pi->ud);
+		persistarcdep<void *>(pi, ref);
 		lua_pop(pi->L, 1);
 					/* perms reftbl ... obj ref */
 #ifdef PLUTO_DEBUG
@@ -645,11 +651,11 @@ static void persist(PersistInfo *pi)
 					/* perms reftbl ... obj */
 	/* If the object is nil, write the pseudoreference 0 */
 	if(lua_isnil(pi->L, -1)) {
-		int zero = 0;
+		void *zero = 0;
 		/* firsttime */
 		pi->writer(pi->L, &zero, sizeof(int), pi->ud);
 		/* ref */
-		pi->writer(pi->L, &zero, sizeof(int), pi->ud);
+		persistarcdep<void *>(pi, zero);
 #ifdef PLUTO_DEBUG
 		printindent(pi->level);
 		printf("0 0\n");
@@ -862,6 +868,16 @@ static void registerobject(int ref, UnpersistInfo *upi)
 					/* perms reftbl ... obj */
 }
 
+/* Unpersist var types with architecture dependent sizes */
+template <typename T>
+static void unpersistarcdep(UnpersistInfo *upi, T &val) {
+	if (sizeof(T) < 8) {
+		T zero;
+		verify(LIF(Z,read)(&upi->zio, &zero, (8 - sizeof(T))) == 0);
+	}
+	verify(LIF(Z,read)(&upi->zio, &val, sizeof(T)) == 0);
+}
+
 static void unpersistboolean(UnpersistInfo *upi)
 {
 					/* perms reftbl ... */
@@ -877,7 +893,7 @@ static void unpersistlightuserdata(UnpersistInfo *upi)
 					/* perms reftbl ... */
 	void *p;
 	lua_checkstack(upi->L, 1);
-	verify(LIF(Z,read)(&upi->zio, &p, sizeof(void *)) == 0);
+	unpersistarcdep<void *>(upi, p);
 	lua_pushlightuserdata(upi->L, p);
 					/* perms reftbl ... ludata */
 }
@@ -898,7 +914,7 @@ static void unpersiststring(UnpersistInfo *upi)
 	size_t length;
 	char* string;
 	lua_checkstack(upi->L, 1);
-	verify(LIF(Z,read)(&upi->zio, &length, sizeof(size_t)) == 0);
+	unpersistarcdep<size_t>(upi, length);
 	string = pdep_newvector(upi->L, length, char);
 	verify(LIF(Z,read)(&upi->zio, string, length) == 0);
 	lua_pushlstring(upi->L, string, length);
@@ -1312,7 +1328,7 @@ static void unpersistthread(int ref, UnpersistInfo *upi)
 	/* First, deserialize the object stack. */
 	{
 		size_t i, stacksize;
-		verify(LIF(Z,read)(&upi->zio, &stacksize, sizeof(size_t)) == 0);
+		unpersistarcdep<size_t>(upi, stacksize);
 		LIF(D,growstack)(L2, (int)stacksize);
 		/* Make sure that the first stack element (a nil, representing
 		 * the imaginary top-level C function) is written to the very,
@@ -1331,16 +1347,16 @@ static void unpersistthread(int ref, UnpersistInfo *upi)
 	/* Now, deserialize the CallInfo stack. */
 	{
 		size_t i, numframes;
-		verify(LIF(Z,read)(&upi->zio, &numframes, sizeof(size_t)) == 0);
+		unpersistarcdep<size_t>(upi, numframes);
 		LIF(D,reallocCI)(L2,numframes*2);
 		for(i=0; i<numframes; i++) {
 			CallInfo *ci = L2->base_ci + i;
 			size_t stackbase, stackfunc, stacktop, savedpc;
-			verify(LIF(Z,read)(&upi->zio, &stackbase, sizeof(size_t)) == 0);
-			verify(LIF(Z,read)(&upi->zio, &stackfunc, sizeof(size_t)) == 0);
-			verify(LIF(Z,read)(&upi->zio, &stacktop, sizeof(size_t)) == 0);
+			unpersistarcdep<size_t>(upi, stackbase);
+			unpersistarcdep<size_t>(upi, stackfunc);
+			unpersistarcdep<size_t>(upi, stacktop);
 			verify(LIF(Z,read)(&upi->zio, &ci->nresults, sizeof(int)) == 0);
-			verify(LIF(Z,read)(&upi->zio, &savedpc, sizeof(size_t)) == 0);
+			unpersistarcdep<size_t>(upi, savedpc);
 
 			if(stacklimit < stacktop)
 				stacklimit = stacktop;
@@ -1363,9 +1379,9 @@ static void unpersistthread(int ref, UnpersistInfo *upi)
 		size_t stackbase, stacktop;
 		L2->savedpc = L2->ci->savedpc;
 		verify(LIF(Z,read)(&upi->zio, &L2->status, sizeof(lu_byte)) == 0);
-		verify(LIF(Z,read)(&upi->zio, &stackbase, sizeof(size_t)) == 0);
-		verify(LIF(Z,read)(&upi->zio, &stacktop, sizeof(size_t)) == 0);
-		verify(LIF(Z,read)(&upi->zio, &L2->errfunc, sizeof(ptrdiff_t)) == 0);
+		unpersistarcdep<size_t>(upi, stackbase);
+		unpersistarcdep<size_t>(upi, stacktop);
+		unpersistarcdep<ptrdiff_t>(upi, L2->errfunc);
 		L2->base = L2->stack + stackbase;
 		L2->top = L2->stack + stacktop;
 	}
@@ -1391,7 +1407,7 @@ static void unpersistthread(int ref, UnpersistInfo *upi)
 			lua_pop(upi->L, 1);
 					/* perms reftbl ... thr */
 
-			verify(LIF(Z,read)(&upi->zio, &stackpos, sizeof(size_t)) == 0);
+			unpersistarcdep<size_t>(upi, stackpos);
 			uv->v = L2->stack + stackpos;
 			gcunlink(upi->L, (GCObject *)uv);
 			uv->marked = luaC_white(g);
@@ -1443,7 +1459,7 @@ static void unpersistuserdata(int ref, UnpersistInfo *upi)
 					/* perms reftbl ... udata */
 	} else {
 		size_t length;
-		verify(LIF(Z,read)(&upi->zio, &length, sizeof(size_t)) == 0);
+		unpersistarcdep<size_t>(upi, length);
 
 		lua_newuserdata(upi->L, length);
 					/* perms reftbl ... udata */
@@ -1561,8 +1577,8 @@ static void unpersist(UnpersistInfo *upi)
 		upi->level--;
 #endif
 	} else {
-		int ref;
-		LIF(Z,read)(&upi->zio, &ref, sizeof(int));
+		void *ref;
+		unpersistarcdep<void *>(upi, ref);
 #ifdef PLUTO_DEBUG
 		printindent(upi->level);
 		printf("0 %d\n", ref);
