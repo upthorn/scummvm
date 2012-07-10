@@ -264,7 +264,7 @@ Common::Error HugoEngine::run() {
 		_status.viewState = kViewIntroInit;
 
 		int16 loadSlot = Common::ConfigManager::instance().getInt("save_slot");
-		if ((loadSlot >= 0) || (loadSlot == -2)) {
+		if ((loadSlot >= 0) || (loadSlot == kAutoSaveSlot)) {
 			_status.skipIntroFl = true;
 			_file->restoreGame(loadSlot);
 		} else {
@@ -277,9 +277,8 @@ Common::Error HugoEngine::run() {
 		g_system->updateScreen();
 		runMachine();
 
-		// TODO: work out better autosave slot solution than slot 99, so user doesn't have to scroll so far
 		if (shouldPerformAutoSave(_lastSaveTime) && canSaveGameStateCurrently()) {
-			_file->saveGame(99, "Autosave");
+			_file->saveGame(kAutoSaveSlot, "Autosave");
 		}
 
 		// Handle input
@@ -715,7 +714,7 @@ void HugoEngine::syncSoundSettings() {
 }
 
 Common::String HugoEngine::getSavegameFilename(int slot) {
-	if (slot == -2) {
+	if (slot == kAutoSaveSlot) {
 		return Common::String::format("_%s.asv", _targetName.c_str());
 	} else {
 		return _targetName + Common::String::format("-%02d.SAV", slot);

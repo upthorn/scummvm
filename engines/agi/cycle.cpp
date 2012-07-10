@@ -365,7 +365,7 @@ int AgiEngine::playGame() {
 		}
 
 		if (shouldPerformAutoSave(_lastSaveTime)) {
-			saveGame(getSavegameFilename(-2), "Autosave");
+			saveGame(getSavegameFilename(kAutoSaveSlot), "Autosave");
 		}
 
 	} while (!(shouldQuit() || _restartGame));

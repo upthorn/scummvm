@@ -190,7 +190,7 @@ SaveStateList HugoMetaEngine::listSaves(const char *target) const {
 
 	// if there is an autosave, put it in front of the list
 	if (autoSavePresent) {
-		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+		saveList.push_back(SaveStateDescriptor(Engine::kAutoSaveSlot, "Autosave"));
 	}
 
 	char slot[3];

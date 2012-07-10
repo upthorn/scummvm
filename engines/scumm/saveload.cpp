@@ -589,7 +589,7 @@ bool ScummEngine::loadState(int slot, bool compat) {
 
 Common::String ScummEngine::makeSavegameName(const Common::String &target, int slot, bool temporary) {
 	Common::String extension;
-	if (slot = -2) {
+	if (slot = kAutoSaveSlot) {
 		return "_" + target + ".asv";
 	} else {
 		extension = Common::String::format(".%c%02d", temporary ? 'c' : 's', slot);

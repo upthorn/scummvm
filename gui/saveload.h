@@ -53,7 +53,6 @@ protected:
 	bool					_thumbnailSupport;
 	bool					_saveDateSupport;
 	bool					_playTimeSupport;
-	bool					_autoSavePresent;
 	String					_target;
 	SaveStateList			_saveList;
 	String					_resultString;

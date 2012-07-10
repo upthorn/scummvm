@@ -188,7 +188,7 @@ void Game::execute() {
 
 			if (engine.shouldPerformAutoSave() && engine.canSaveGameStateCurrently()) {
 				Common::String desc = "Autosave";
-				engine.saveGame(-2, desc);
+				engine.saveGame(Engine::kAutoSaveSlot, desc);
 			}
 
 			while (events.pollEvent()) {

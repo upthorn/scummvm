@@ -131,7 +131,7 @@ Common::Error LureEngine::go() {
 	// If requested, load a savegame instead of showing the intro
 	if (ConfMan.hasKey("save_slot")) {
 		_gameToLoad = ConfMan.getInt("save_slot");
-		if (_gameToLoad < -2 || _gameToLoad > 999)
+		if (_gameToLoad < kAutoSaveSlot || _gameToLoad > 999)
 			_gameToLoad = -1;
 	}
 
@@ -182,7 +182,7 @@ void LureEngine::pauseEngineIntern(bool pause) {
 
 const char *LureEngine::generateSaveName(int slotNumber) {
 	static char buffer[15];
-	if (slotNumber == -2) {
+	if (slotNumber == kAutoSaveSlot) {
 		sprintf(buffer, "_%s.asv", _targetName.c_str());
 	} else {
 		sprintf(buffer, "lure.%.3d", slotNumber);

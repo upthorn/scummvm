@@ -261,7 +261,7 @@ void MainMenuDialog::load() {
 
 	_engine->setGameToLoadSlot(slot);
 
-	if (slot >= 0 || slot == -2)
+	if (slot >= 0 || slot == Engine::kAutoSaveSlot)
 		close();
 }
 

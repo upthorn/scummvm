@@ -22,6 +22,8 @@
 #include "common/config-manager.h"
 #include "common/translation.h"
 
+#include "engines/engine.h"
+
 #include "gui/widgets/list.h"
 #include "gui/message.h"
 #include "gui/saveload.h"
@@ -97,9 +99,6 @@ int SaveLoadChooser::runModalWithPluginAndTarget(const EnginePlugin *plugin, con
 	updateSaveList();
 
 	int ret = Dialog::runModal();
-
-	if ((ret > 0) && _autoSavePresent) 
-		ret--;
 
 	// Revert to the old active domain
 	ConfMan.setActiveDomain(oldDomain);
@@ -328,23 +327,23 @@ void SaveLoadChooser::updateSaveList() {
 
 	int curSlot = 0;
 	int saveSlot = 0;
-	_autoSavePresent = false;
+	bool autoSavePresent = false;
 	int maximumSaveSlots = (*_plugin)->getMaximumSaveSlot();
 	StringArray saveNames;
 	ListWidget::ColorList colors;
 	for (SaveStateList::const_iterator x = _saveList.begin(); x != _saveList.end(); ++x) {
-		saveSlot = x->getSaveSlot() + (_autoSavePresent ? 1 : 0);
+		saveSlot = x->getSaveSlot() + (autoSavePresent ? 1 : 0);
 
 		// Don't use up a slot for an autosave
-		if (saveSlot == -2) { 
+		if (saveSlot == Engine::kAutoSaveSlot) { 
 			maximumSaveSlots++;
-			_autoSavePresent = true;
+			autoSavePresent = true;
 		}
 
 		// Handle gaps in the list of save games
 		if (curSlot < saveSlot) {
 			while (curSlot < saveSlot) {
-				SaveStateDescriptor dummySave(curSlot - (_autoSavePresent ? 1 : 0), "");
+				SaveStateDescriptor dummySave(curSlot - (autoSavePresent ? 1 : 0), "");
 				_saveList.insert_at(curSlot, dummySave);
 				saveNames.push_back(dummySave.getDescription());
 				colors.push_back(ThemeEngine::kFontColorNormal);
@@ -353,7 +352,7 @@ void SaveLoadChooser::updateSaveList() {
 
 			// Sync the save list iterator
 			for (x = _saveList.begin(); x != _saveList.end(); ++x) {
-				if ((x->getSaveSlot() + (_autoSavePresent ? 1 : 0)) == saveSlot)
+				if ((x->getSaveSlot() + (autoSavePresent ? 1 : 0)) == saveSlot)
 					break;
 			}
 		}

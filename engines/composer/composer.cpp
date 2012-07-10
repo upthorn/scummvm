@@ -171,12 +171,12 @@ Common::Error ComposerEngine::run() {
 			int slot = ConfMan.getInt("save_slot");
 
 			// Only load savegames from possible slots.
-			if ((slot == -2) || ((slot >= 0) && (slot <= 99))) 
+			if ((slot == kAutoSaveSlot) || ((slot >= 0) && (slot <= 99))) 
 				loadGameState(ConfMan.getInt("save_slot"));
 			ConfMan.removeKey("save_slot", Common::ConfigManager::kTransientDomain);
 		}
 		if (shouldPerformAutoSave(_lastSaveTime))
-			saveGameState(-2, "Autosave");
+			saveGameState(kAutoSaveSlot, "Autosave");
 		while (_eventMan->pollEvent(event)) {
 			switch (event.type) {
 			case Common::EVENT_LBUTTONDOWN:

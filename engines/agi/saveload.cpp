@@ -558,7 +558,7 @@ int AgiEngine::loadGame(const Common::String &fileName, bool checkId) {
 
 Common::String AgiEngine::getSavegameFilename(int num) const {
 	Common::String saveLoadSlot;
-	if (num == -2) {
+	if (num == kAutoSaveSlot) {
 		saveLoadSlot = Common::String::format("_%s.asv", _targetName.c_str());
 	} else {
 		saveLoadSlot += Common::String::format("%s.%.3d", _targetName.c_str(), num);

@@ -1221,7 +1221,7 @@ SaveStateList ScummMetaEngine::listSaves(const char *target) const {
 
 	// if there is an autosave, put it in front of the list
 	if (autoSavePresent) {
-		saveList.push_back(SaveStateDescriptor(-2, "Autosave"));
+		saveList.push_back(SaveStateDescriptor(Engine::kAutoSaveSlot, "Autosave"));
 	}
 
 	for (Common::StringArray::const_iterator file = filenames.begin(); file != filenames.end(); ++file) {

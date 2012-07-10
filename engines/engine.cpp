@@ -420,7 +420,7 @@ void Engine::openMainMenuDialog() {
 	// (not from inside the menu loop to avoid
 	// mouse cursor glitches and simliar bugs,
 	// e.g. #2822778).
-	if ((_saveSlotToLoad >= 0) || (_saveSlotToLoad == -2)) {
+	if ((_saveSlotToLoad >= 0) || (_saveSlotToLoad == kAutoSaveSlot)) {
 		Common::Error status = loadGameState(_saveSlotToLoad);
 		if (status.getCode() != Common::kNoError) {
 			Common::String failMessage = Common::String::format(_("Gamestate load failed (%s)! "

@@ -29,6 +29,8 @@
 #include "common/system.h"
 #include "common/translation.h"
 
+#include "engines/engine.h"
+
 #include "gui/about.h"
 #include "gui/browser.h"
 #include "gui/chooser.h"
@@ -991,7 +993,7 @@ void LauncherDialog::loadGame(int item) {
 		if ((*plugin)->hasFeature(MetaEngine::kSupportsListSaves) &&
 			(*plugin)->hasFeature(MetaEngine::kSupportsLoadingDuringStartup)) {
 			int slot = _loadDialog->runModalWithPluginAndTarget(plugin, target);
-			if ((slot >= 0) || (slot == -2)) {
+			if ((slot >= 0) || (slot == Engine::kAutoSaveSlot)) {
 				ConfMan.setActiveDomain(_domains[item]);
 				ConfMan.setInt("save_slot", slot, Common::ConfigManager::kTransientDomain);
 				close();

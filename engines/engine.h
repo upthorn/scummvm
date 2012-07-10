@@ -53,6 +53,9 @@ class Engine {
 public:
 	OSystem *_system;
 	Audio::Mixer *_mixer;
+	enum {
+		kAutoSaveSlot = -5
+	};
 
 protected:
 	Common::TimerManager *_timer;

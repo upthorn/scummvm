@@ -2075,7 +2075,7 @@ void ScummEngine::scummLoop(int delta) {
 
 	// Trigger autosave if necessary.
 	if (!_saveLoadFlag && shouldPerformAutoSave(_lastSaveTime) && canSaveGameStateCurrently()) {
-		_saveLoadSlot = -2;
+		_saveLoadSlot = kAutoSaveSlot;
 		_saveLoadDescription = "Autosave";
 		_saveLoadFlag = 1;
 		_saveTemporaryState = false;
